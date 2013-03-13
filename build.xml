@@ -2,6 +2,7 @@
 <project name="CheckedAssertions" default="jar" basedir=".">
 
   <property name="classes.dir" value="classes"/>
+  <property name="bin.dir" value="bin"/>
   <property name="src.dir" value="src"/>
 
   <target name="init">
@@ -10,6 +11,7 @@
 
   <target name="clean">
     <delete dir="${classes.dir}"/>
+    <delete dir="${bin.dir}"/>
   	<delete file="checkassertions.jar"/>
   </target>
 
