@@ -59,31 +59,16 @@ public class AssertionTranslator implements Translator {
 
 	private void instrumentMethod(final String template, CtMethod ctMethod)
 			throws CannotCompileException {
-		ctMethod.instrument(new ExprEditor() {
-			public void edit(FieldAccess fa) throws CannotCompileException {
-				try {
-					CtField ctField = fa.getField();
-					if (fa.isWriter() && ctField.hasAnnotation(Assertion.class)) {
-						String name = fa.getFieldName();
-						String annotation = ((Assertion) ctField
-								.getAnnotation(Assertion.class)).value();
-						fa.replace(String.format(template, name, annotation,
-								annotation));
-					}
-				} catch (NotFoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (ClassNotFoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		});
+		ctMethod.instrument(myExpressionEditor(template));
 	}
-
+	
 	private void instrumentMethod(final String template,
 			CtConstructor ctConstructor) throws CannotCompileException {
-		ctConstructor.instrument(new ExprEditor() {
+		ctConstructor.instrument(myExpressionEditor(template));
+	}
+
+	private ExprEditor myExpressionEditor(final String template) {
+		return new ExprEditor() {
 			public void edit(FieldAccess fa) throws CannotCompileException {
 				try {
 					CtField ctField = fa.getField();
@@ -102,7 +87,7 @@ public class AssertionTranslator implements Translator {
 					e.printStackTrace();
 				}
 			}
-		});
+		};
 	}
 
 	private void assertMethod(CtMethod ctMethod) throws CannotCompileException {
