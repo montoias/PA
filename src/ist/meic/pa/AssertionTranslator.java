@@ -21,18 +21,11 @@ public class AssertionTranslator implements Translator {
 		try {
 			makeAssertable(ctClass);
 
-			for (CtField field : ctClass.getFields()) {
-				instrumentField(field);
-			}
 		} catch (CannotCompileException e) {
 			e.printStackTrace();
 		}
 	}
 
-	private void instrumentField(CtField field) {
-		
-
-	}
 
 	@Override
 	public void start(ClassPool arg0) throws NotFoundException,
