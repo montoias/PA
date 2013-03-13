@@ -12,33 +12,48 @@ import javassist.expr.ExprEditor;
 import javassist.expr.FieldAccess;
 import javassist.expr.MethodCall;
 
+/**
+ * TODO: @miguel a nice description for the class is needed.
+ * @author groupXX
+ *
+ */
 public class AssertionTranslator implements Translator {
+
+	@Override
+	public void start(ClassPool arg0) throws NotFoundException,
+	CannotCompileException {
+
+	}
 
 	@Override
 	public void onLoad(ClassPool pool, String className)
 			throws NotFoundException, CannotCompileException {
 		CtClass ctClass = pool.get(className);
 		try {
-			addField(ctClass);
+			addHashSet(ctClass);
 			makeAssertable(ctClass);
 		} catch (CannotCompileException e) {
 			e.printStackTrace();
 		}
 	}
 
-	private void addField(CtClass ctClass) throws CannotCompileException {
+	/**
+	 * Adds an HashSet to the given class, that is used to track not initialized variables
+	 * @param ctClass
+	 * @throws CannotCompileException
+	 */
+	private void addHashSet(CtClass ctClass) throws CannotCompileException {
 		CtField ctField = CtField
 				.make("java.util.HashSet variables$notInit = new java.util.HashSet();",
 						ctClass);
 		ctClass.addField(ctField);
 	}
 
-	@Override
-	public void start(ClassPool arg0) throws NotFoundException,
-			CannotCompileException {
-
-	}
-
+	/**
+	 * The "Assertion" annotations are now interpreted in the given class.
+	 * @param ctClass
+	 * @throws CannotCompileException
+	 */
 	private void makeAssertable(CtClass ctClass) throws CannotCompileException {
 
 		for (CtMethod ctMethod : ctClass.getDeclaredMethods()) {
@@ -51,23 +66,42 @@ public class AssertionTranslator implements Translator {
 
 	}
 
+	/**
+	 * TODO: Rethink name; AssertMethodFields perhaps?
+	 * 
+	 * @param ctMethod
+	 * @throws CannotCompileException
+	 */
 	private void instrumentMethod(CtMethod ctMethod)
 			throws CannotCompileException {
 		ctMethod.instrument(myExpressionEditor());
 	}
 
+	/**
+	 * TODO: Rethink name
+	 * @param ctConstructor
+	 * @throws CannotCompileException
+	 */
 	private void instrumentConstructor(CtConstructor ctConstructor)
 			throws CannotCompileException {
 		ctConstructor.instrument(myExpressionEditor());
 	}
-	
 
+
+	/**
+	 * TODO: Rethink name. 
+	 * TODO: Check field initialization upon function entry.
+	 * TODO: Check if reader exception is correct.
+	 * Returns an ExprEditor with a given template for Assertion annotations.
+	 * It has both cases when the Field Access is a read, or a write.
+	 * The ExprEditor is later used to instrument a method/constructor.
+	 * @return
+	 */
 	private ExprEditor myExpressionEditor() {
 		return new ExprEditor() {
 			public void edit(FieldAccess fa) throws CannotCompileException {
 				try {
 					final String template;
-					System.out.println(fa.getField().getName());
 					CtField ctField = fa.getField();
 					if (fa.isWriter() && ctField.hasAnnotation(Assertion.class)) {
 						template = "  {"
@@ -79,16 +113,14 @@ public class AssertionTranslator implements Translator {
 						String name = fa.getField().getName();
 						String annotation = ((Assertion) ctField
 								.getAnnotation(Assertion.class)).value();
-						System.out.println(name);
 						fa.replace(String.format(template, name, annotation,
 								annotation, name));
 					} else if (fa.isReader()
 							&& ctField.hasAnnotation(Assertion.class)) {
 						template = "  {"
 								+ "  $_ = $proceed($$);"
-								+ "  System.out.println(\"array\" + %s);"
 								+ "  if(!(variables$notInit.contains(\"%s\")))"
-								+ "    throw new RuntimeException(\"The assertion %s is false\");"
+								+ "    throw new RuntimeException(\"Error: %s was not initialized\");"
 								+ "} ";
 
 						String name = fa.getField().getName();
@@ -106,6 +138,13 @@ public class AssertionTranslator implements Translator {
 		};
 	}
 
+	/**
+	 * TODO: Check method assertions upon function entry.
+	 * TODO: Assert constructors?
+	 * Instruments the given method to interpret the Assertion annotations.
+	 * @param ctMethod
+	 * @throws CannotCompileException
+	 */
 	private void assertMethod(CtMethod ctMethod) throws CannotCompileException {
 		final String template = "{"
 				+ "  $_ = $proceed($$);"

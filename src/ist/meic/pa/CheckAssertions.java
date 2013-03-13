@@ -1,6 +1,11 @@
 package ist.meic.pa;
 import javassist.*;
 
+/**
+ * TODO: class description
+ * @author groupXX
+ *
+ */
 public class CheckAssertions {
 
 	public static void main(String[] args) {
