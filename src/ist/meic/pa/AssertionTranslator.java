@@ -1,8 +1,5 @@
 package ist.meic.pa;
 
-import java.lang.reflect.Type;
-import java.util.HashSet;
-
 import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CtClass;
