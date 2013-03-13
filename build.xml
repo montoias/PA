@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="CheckedAssertions" default="jar" basedir=".">
+
+  <property name="classes.dir" value="classes"/>
+  <property name="src.dir" value="src"/>
+
+  <target name="init">
+    <mkdir dir="${classes.dir}"/>
+  </target>
+
+  <target name="clean">
+    <delete dir="${classes.dir}"/>
+  	<delete file="checkassertions.jar"/>
+  </target>
+
+  <target name="compile" depends="init">
+    <javac destdir="${classes.dir}"
+           srcdir="${src.dir}"
+           debug="true">
+     <classpath>
+      	<pathelement location="javassist.jar"/>
+      </classpath>
+    </javac>
+  </target>
+	
+  <target name="jar" depends="compile">
+  	<jar destfile="checkassertions.jar"
+  		basedir="${classes.dir}">
+  	  <manifest>
+  	  <attribute name="Main-Class" value="ist.meic.pa.CheckAssertions"/>
+  	  </manifest>
+    </jar>
+  </target>
+
+  <target name="run" depends="compile">
+    <java classname="ist.meic.pa.CheckAssertions" fork="true">
+      <classpath>
+        <pathelement location="${classes.dir}"/>
+      </classpath>
+    </java>
+  </target>
+
+</project>
