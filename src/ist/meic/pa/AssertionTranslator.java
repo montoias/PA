@@ -63,6 +63,7 @@ public class AssertionTranslator implements Translator {
 			throws CannotCompileException {
 		ctConstructor.instrument(myExpressionEditor());
 	}
+	
 
 	private ExprEditor myExpressionEditor() {
 		return new ExprEditor() {
