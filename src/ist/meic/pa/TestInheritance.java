@@ -4,13 +4,17 @@ public class TestInheritance extends Test{
 
 	public TestInheritance() {}
 	
+	public TestInheritance(String test) {
+		super(test);
+	}
+	
 	@Override
 	public int inheritanceTest1(int a){
 		return a + 1;
 	}
 
 	@Override 
-	@Assertion("$_ != 0")
+	@Assertion("($1 != 1) && ($_ != 0)")
 	public int inheritanceTest2(int a){
 		return a*a;
 	}
@@ -19,14 +23,21 @@ public class TestInheritance extends Test{
 		return a+b;
 	}
 
-	@Assertion("($1 != 0) && ($_ > 0)")
+	@Assertion("($1 != 1) && ($_ > 0)")
 	public int inheritanceTest4(int a, int b){
 		return a - 1;
 	}
 
 	public static void main(String[] args) {
-		TestInheritance t = new TestInheritance();
-
+		TestInheritance t = null;
+		
+		try {
+			t = new TestInheritance();
+		}
+		catch (RuntimeException r) {
+			System.err.println(r.getMessage());
+		}
+		
 		try {
 			t.inheritanceTest1(1000);		//works
 		}

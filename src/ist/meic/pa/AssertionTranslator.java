@@ -8,9 +8,11 @@ import javassist.CtField;
 import javassist.CtMethod;
 import javassist.NotFoundException;
 import javassist.Translator;
+import javassist.expr.ConstructorCall;
 import javassist.expr.ExprEditor;
 import javassist.expr.FieldAccess;
 import javassist.expr.MethodCall;
+import javassist.expr.NewExpr;
 
 /**
  * TODO: @miguel a nice description for the class is needed.
@@ -136,10 +138,25 @@ public class AssertionTranslator implements Translator {
 
 	private void assertBehavior(CtBehavior ctBehavior) throws CannotCompileException {
 		final String template = "{"
+				+ "  if(!(%s))"
+				+ "    throw new RuntimeException(\"The assertion %s is false\");"
+				+ ""
 				+ "  $_ = $proceed($$);"
+				+ ""		
 				+ "  if(!(%s))"
 				+ "    throw new RuntimeException(\"The assertion %s is false\");"
 				+ "}";
+		
+		final String ctemplate = "{"
+				+ "  if(!(%s))"
+				+ "    throw new RuntimeException(\"The assertion %s is false\");"
+				+ "  $_ = $proceed($$);"
+				+ "}";
+		final String atemplate = "{"
+				+ "  if(!(%s))"
+				+ "    throw new RuntimeException(\"The assertion %s is false\");"
+				+ "  $proceed($$);"
+				+ "}";		
 
 		ctBehavior.instrument(new ExprEditor() {
 
@@ -150,7 +167,48 @@ public class AssertionTranslator implements Translator {
 					annotation = checkSuperclass(mc.getMethod());
 					
 					if (!annotation.equals("")) {
-						mc.replace(String.format(template, annotation,
+						String before = "";
+						String after = "";
+						String parse[] = annotation.split(" && ");
+						for(String s: parse){
+							if(s.contains("$_")){
+								after += after.equals("") ? s : " && " + s;
+							}
+							else {
+								before += before.equals("") ? s : " && " + s;
+							}
+						}
+						mc.replace(String.format(template, before, annotation, after, annotation));
+					}
+				} catch (NotFoundException e) {
+					System.out.println("Shouldn't happen.");
+				}
+
+			}
+			
+			public void edit(ConstructorCall cc) throws CannotCompileException {
+
+				String annotation;
+				try {
+					annotation = checkSuperclass(cc.getConstructor());
+					
+					if (!annotation.equals("")) {
+						cc.replace(String.format(atemplate, annotation,
+								annotation));
+					}
+				} catch (NotFoundException e) {
+					System.out.println("Shouldn't happen.");
+				}
+
+			}
+			
+			public void edit(NewExpr cc) throws CannotCompileException {
+				String annotation;
+				try {
+					annotation = checkSuperclass(cc.getConstructor());
+					
+					if (!annotation.equals("")) {
+						cc.replace(String.format(ctemplate, annotation,
 								annotation));
 					}
 				} catch (NotFoundException e) {

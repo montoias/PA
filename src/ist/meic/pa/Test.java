@@ -25,6 +25,7 @@ public class Test{
 	 * Since constructors are different entities than methods,
 	 * we use it also to test fields. We use overloading for debug purposes.
 	 */
+	@Assertion("$1.length() > 2")
 	public Test(String test) {
 		bar = methodAssertions(2);	//works
 		baz = 3;					//works
@@ -87,7 +88,7 @@ public class Test{
 
 		try {
 			t1 = new Test();
-			t2 = new Test("Testing");
+			t2 = new Test("Testng");
 		}
 		catch (RuntimeException r) {
 			System.err.println(r.getMessage());
