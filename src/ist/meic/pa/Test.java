@@ -2,7 +2,6 @@ package ist.meic.pa;
 
 /**
  * TODO: Make multiple tests.
- * FIXME: Assertion("true") throws an exception
  * Test class where the multiple problems of the project are tested.
  * @author groupXX
  *
@@ -19,16 +18,19 @@ public class Test {
 	@Assertion("true")
 	int abc;
 	
+	
+	public Test() {}
+	
 	/**
 	 * Since constructors are different entities than methods,
-	 * we use it also to test fields.
+	 * we use it also to test fields. We use overloading for debug purposes.
 	 */
-	public Test() {
+	public Test(String test) {
 		bar = testAssertions(2);	//works
 		baz = 3;					//works
 		bar += 2;   				//works
 		quux = "foo"; 				//works
-		testAssertions(3);  		//fails
+		testAssertions(baz);  		//fails
 		//baz = 0; 					//fails
 	}
 
@@ -67,21 +69,21 @@ public class Test {
 		
 		try {
 			t = new Test();
-		//	t.testAssertions(3); // fails
+			//t = new Test("Testing");
 		}
 		catch (RuntimeException r) {
 			System.err.println(r.getMessage());
 		}
 		
 		try {
-		//	t.initializationTest();
+			t.initializationTest();
 		}
 		catch (RuntimeException r) {
 			System.err.println(r.getMessage());
 		}
 		
 		try {
-		//	t.assertionTest();
+			t.assertionTest();
 		}
 		catch (RuntimeException r) {
 			System.err.println(r.getMessage());
