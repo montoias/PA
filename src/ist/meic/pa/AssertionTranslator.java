@@ -2,10 +2,9 @@ package ist.meic.pa;
 
 import javassist.CannotCompileException;
 import javassist.ClassPool;
+import javassist.CtBehavior;
 import javassist.CtClass;
-import javassist.CtConstructor;
 import javassist.CtField;
-import javassist.CtMethod;
 import javassist.NotFoundException;
 import javassist.Translator;
 import javassist.expr.ExprEditor;
@@ -22,7 +21,7 @@ public class AssertionTranslator implements Translator {
 
 	@Override
 	public void start(ClassPool arg0) throws NotFoundException,
-			CannotCompileException {
+	CannotCompileException {
 
 	}
 
@@ -60,37 +59,10 @@ public class AssertionTranslator implements Translator {
 	 */
 	private void makeAssertable(CtClass ctClass) throws CannotCompileException {
 
-		for (CtMethod ctMethod : ctClass.getDeclaredMethods()) {
-			instrumentMethod(ctMethod);
-			assertMethod(ctMethod);
+		for (CtBehavior ctBehavior : ctClass.getDeclaredBehaviors()) {
+			instrumentBehavior(ctBehavior);
+			assertBehavior(ctBehavior);
 		}
-		for (CtConstructor ctConstructor : ctClass.getDeclaredConstructors()) {
-			instrumentConstructor(ctConstructor);
-			assertMethod(ctConstructor);
-		}
-
-	}
-
-	/**
-	 * TODO: Rethink name; AssertMethodFields perhaps?
-	 * 
-	 * @param ctMethod
-	 * @throws CannotCompileException
-	 */
-	private void instrumentMethod(CtMethod ctMethod)
-			throws CannotCompileException {
-		ctMethod.instrument(myExpressionEditor());
-	}
-
-	/**
-	 * TODO: Rethink name
-	 * 
-	 * @param ctConstructor
-	 * @throws CannotCompileException
-	 */
-	private void instrumentConstructor(CtConstructor ctConstructor)
-			throws CannotCompileException {
-		ctConstructor.instrument(myExpressionEditor());
 	}
 
 	/**
@@ -102,8 +74,16 @@ public class AssertionTranslator implements Translator {
 	 * 
 	 * @return
 	 */
-	private ExprEditor myExpressionEditor() {
-		return new ExprEditor() {
+	/**
+	 * TODO: Rethink name; AssertMethodFields perhaps?
+	 * 
+	 * @param ctBehavior
+	 * @throws CannotCompileException
+	 */
+	private void instrumentBehavior(CtBehavior ctBehavior)
+			throws CannotCompileException {
+		ctBehavior.instrument(new ExprEditor() {
+
 			public void edit(FieldAccess fa) throws CannotCompileException {
 				try {
 					final String template;
@@ -140,54 +120,27 @@ public class AssertionTranslator implements Translator {
 					e.printStackTrace();
 				}
 			}
-		};
+		});
 	}
+
 
 	/**
 	 * TODO: Check method assertions upon function entry. TODO: Assert
 	 * constructors? Instruments the given method to interpret the Assertion
 	 * annotations.
 	 * 
-	 * @param ctMethod
+	 * @param ctBehavior
 	 * @throws CannotCompileException
 	 */
 
-	private void assertMethod(CtMethod ctMethod) throws CannotCompileException {
+	private void assertBehavior(CtBehavior ctBehavior) throws CannotCompileException {
 		final String template = "{"
 				+ "  $_ = $proceed($$);"
 				+ "  if(!(%s))"
 				+ "    throw new RuntimeException(\"The assertion %s is false\");"
 				+ "}";
 
-		ctMethod.instrument(new ExprEditor() {
-			public void edit(MethodCall mc) throws CannotCompileException {
-				try {
-					if (mc.getMethod().hasAnnotation(Assertion.class)) {
-						String annotation = ((Assertion) mc.getMethod()
-								.getAnnotation(Assertion.class)).value();
-						mc.replace(String.format(template, annotation,
-								annotation));
-					}
-				} catch (NotFoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (ClassNotFoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		});
-	}
-
-	private void assertMethod(CtConstructor ctConstructor)
-			throws CannotCompileException {
-		final String template = "{"
-				+ "  $_ = $proceed($$);"
-				+ "  if(!(%s))"
-				+ "    throw new RuntimeException(\"The assertion %s is false\");"
-				+ "}";
-
-		ctConstructor.instrument(new ExprEditor() {
+		ctBehavior.instrument(new ExprEditor() {
 			public void edit(MethodCall mc) throws CannotCompileException {
 				try {
 					if (mc.getMethod().hasAnnotation(Assertion.class)) {
