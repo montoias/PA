@@ -5,6 +5,7 @@ import javassist.ClassPool;
 import javassist.CtBehavior;
 import javassist.CtClass;
 import javassist.CtField;
+import javassist.CtMethod;
 import javassist.NotFoundException;
 import javassist.Translator;
 import javassist.expr.ExprEditor;
@@ -141,21 +142,49 @@ public class AssertionTranslator implements Translator {
 				+ "}";
 
 		ctBehavior.instrument(new ExprEditor() {
+
 			public void edit(MethodCall mc) throws CannotCompileException {
+
+				String annotation;
 				try {
-					if (mc.getMethod().hasAnnotation(Assertion.class)) {
-						String annotation = ((Assertion) mc.getMethod()
-								.getAnnotation(Assertion.class)).value();
+					annotation = checkSuperclass(mc.getMethod());
+					
+					if (!annotation.equals("")) {
 						mc.replace(String.format(template, annotation,
 								annotation));
 					}
 				} catch (NotFoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (ClassNotFoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+					System.out.println("Shouldn't happen.");
 				}
+
+			}
+
+			private String checkSuperclass(CtBehavior ctBehavior) {
+				String annotation = "";
+
+				try {
+					CtClass nextClass = ctBehavior.getDeclaringClass().getSuperclass();
+
+					if(nextClass != null) {
+						annotation = checkSuperclass(nextClass.getDeclaredMethod(ctBehavior.getName()));
+					}
+				} catch (NotFoundException e) {
+					// If this exception is thrown, it means it doesn't exist in the superclass, so there's nothing to do
+				}
+
+				try {
+
+					if (ctBehavior.hasAnnotation(Assertion.class)) {
+						String value = ((Assertion) ctBehavior.getAnnotation(Assertion.class)).value();
+						annotation = annotation.equals("") ? value : annotation + " && " + value;
+					}
+
+				}
+				catch (ClassNotFoundException e) {
+					//Not supposed to happen
+				}
+
+				return annotation;
 			}
 		});
 	}

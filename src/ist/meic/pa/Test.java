@@ -6,7 +6,7 @@ package ist.meic.pa;
  * @author groupXX
  *
  */
-public class Test {
+public class Test{
 	@Assertion("foo>0")
 	int foo = 1;
 	@Assertion("bar%2==0")
@@ -17,20 +17,20 @@ public class Test {
 	String quux;
 	@Assertion("true")
 	int abc;
-	
-	
+
+
 	public Test() {}
-	
+
 	/**
 	 * Since constructors are different entities than methods,
 	 * we use it also to test fields. We use overloading for debug purposes.
 	 */
 	public Test(String test) {
-		bar = testAssertions(2);	//works
+		bar = methodAssertions(2);	//works
 		baz = 3;					//works
 		bar += 2;   				//works
 		quux = "foo"; 				//works
-		testAssertions(baz);  		//fails
+		methodAssertions(baz);  	//fails
 		//baz = 0; 					//fails
 	}
 
@@ -40,7 +40,7 @@ public class Test {
 	private void initializationTest() {
 		abc++;					//fails
 	}
-	
+
 	/**
 	 * Testing for field assertion inside methods.
 	 */
@@ -49,46 +49,64 @@ public class Test {
 		baz = 3;				//works
 		bar += 2;   			//works
 		quux = "foo"; 			//works
-		testAssertions(2); 		//works
-		testAssertions(3);  	//fails
+		methodAssertions(2); 	//works
+		methodAssertions(3);  //fails
 		//baz = 0; 				//fails
 	}
 
-	/**
-	 * Testing for method assertion at entry and exit of the method.
-	 * @param x
-	 * @return
-	 */
-	@Assertion("($1 > 0) && ($_%2 == 0)")
-	public int testAssertions(int x) {
+	@Assertion("($1>=0) && ($_%2 == 0)")
+	public int methodAssertions(int x) {
 		return x + 2;
+	}
+	
+	/*
+	 * Inheritance Tests
+	 * 
+	 */	
+	public int inheritanceTest1(int a){
+		return a + 1;
+	}
+
+	public int inheritanceTest2(int a){
+		return a+a;
+	}
+	
+	@Assertion("($1 > $2) && ($_ < 20)")
+	public int inheritanceTest3(int a, int b){
+		return 0;
+	}
+	
+	@Assertion("($1 + $2) != 2")
+	public int inheritanceTest4(int a, int b){
+		return b;
 	}
 
 	public static void main(String[] args) {
-		Test t = null;
-		
+		Test t1 = null;
+		Test t2 = null;
+
 		try {
-			t = new Test();
-			//t = new Test("Testing");
+			t1 = new Test();
+			t2 = new Test("Testing");
 		}
 		catch (RuntimeException r) {
 			System.err.println(r.getMessage());
 		}
-		
+
 		try {
-			t.initializationTest();
+			t1.initializationTest();
 		}
 		catch (RuntimeException r) {
 			System.err.println(r.getMessage());
 		}
-		
+
 		try {
-			t.assertionTest();
+			t1.assertionTest();
 		}
 		catch (RuntimeException r) {
 			System.err.println(r.getMessage());
 		}
-		
+
 	}
-		
+
 }
