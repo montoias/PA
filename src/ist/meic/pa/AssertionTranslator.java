@@ -14,14 +14,15 @@ import javassist.expr.MethodCall;
 
 /**
  * TODO: @miguel a nice description for the class is needed.
+ * 
  * @author groupXX
- *
+ * 
  */
 public class AssertionTranslator implements Translator {
 
 	@Override
 	public void start(ClassPool arg0) throws NotFoundException,
-	CannotCompileException {
+			CannotCompileException {
 
 	}
 
@@ -38,7 +39,9 @@ public class AssertionTranslator implements Translator {
 	}
 
 	/**
-	 * Adds an HashSet to the given class, that is used to track not initialized variables
+	 * Adds an HashSet to the given class, that is used to track not initialized
+	 * variables
+	 * 
 	 * @param ctClass
 	 * @throws CannotCompileException
 	 */
@@ -51,6 +54,7 @@ public class AssertionTranslator implements Translator {
 
 	/**
 	 * The "Assertion" annotations are now interpreted in the given class.
+	 * 
 	 * @param ctClass
 	 * @throws CannotCompileException
 	 */
@@ -60,8 +64,9 @@ public class AssertionTranslator implements Translator {
 			instrumentMethod(ctMethod);
 			assertMethod(ctMethod);
 		}
-		for (CtConstructor ctMethod : ctClass.getDeclaredConstructors()) {
-			instrumentConstructor(ctMethod);
+		for (CtConstructor ctConstructor : ctClass.getDeclaredConstructors()) {
+			instrumentConstructor(ctConstructor);
+			assertMethod(ctConstructor);
 		}
 
 	}
@@ -79,6 +84,7 @@ public class AssertionTranslator implements Translator {
 
 	/**
 	 * TODO: Rethink name
+	 * 
 	 * @param ctConstructor
 	 * @throws CannotCompileException
 	 */
@@ -87,14 +93,13 @@ public class AssertionTranslator implements Translator {
 		ctConstructor.instrument(myExpressionEditor());
 	}
 
-
 	/**
-	 * TODO: Rethink name. 
-	 * TODO: Check field initialization upon function entry.
-	 * TODO: Check if reader exception is correct.
-	 * Returns an ExprEditor with a given template for Assertion annotations.
-	 * It has both cases when the Field Access is a read, or a write.
-	 * The ExprEditor is later used to instrument a method/constructor.
+	 * TODO: Rethink name. TODO: Check field initialization upon function entry.
+	 * TODO: Check if reader exception is correct. Returns an ExprEditor with a
+	 * given template for Assertion annotations. It has both cases when the
+	 * Field Access is a read, or a write. The ExprEditor is later used to
+	 * instrument a method/constructor.
+	 * 
 	 * @return
 	 */
 	private ExprEditor myExpressionEditor() {
@@ -139,12 +144,14 @@ public class AssertionTranslator implements Translator {
 	}
 
 	/**
-	 * TODO: Check method assertions upon function entry.
-	 * TODO: Assert constructors?
-	 * Instruments the given method to interpret the Assertion annotations.
+	 * TODO: Check method assertions upon function entry. TODO: Assert
+	 * constructors? Instruments the given method to interpret the Assertion
+	 * annotations.
+	 * 
 	 * @param ctMethod
 	 * @throws CannotCompileException
 	 */
+
 	private void assertMethod(CtMethod ctMethod) throws CannotCompileException {
 		final String template = "{"
 				+ "  $_ = $proceed($$);"
@@ -153,6 +160,34 @@ public class AssertionTranslator implements Translator {
 				+ "}";
 
 		ctMethod.instrument(new ExprEditor() {
+			public void edit(MethodCall mc) throws CannotCompileException {
+				try {
+					if (mc.getMethod().hasAnnotation(Assertion.class)) {
+						String annotation = ((Assertion) mc.getMethod()
+								.getAnnotation(Assertion.class)).value();
+						mc.replace(String.format(template, annotation,
+								annotation));
+					}
+				} catch (NotFoundException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (ClassNotFoundException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		});
+	}
+
+	private void assertMethod(CtConstructor ctConstructor)
+			throws CannotCompileException {
+		final String template = "{"
+				+ "  $_ = $proceed($$);"
+				+ "  if(!(%s))"
+				+ "    throw new RuntimeException(\"The assertion %s is false\");"
+				+ "}";
+
+		ctConstructor.instrument(new ExprEditor() {
 			public void edit(MethodCall mc) throws CannotCompileException {
 				try {
 					if (mc.getMethod().hasAnnotation(Assertion.class)) {

@@ -28,9 +28,8 @@ public class Test {
 		baz = 3;					//works
 		bar += 2;   				//works
 		quux = "foo"; 				//works
-		testAssertions(baz);  		//fails
+		testAssertions(3);  		//fails
 		//baz = 0; 					//fails
-		
 	}
 
 	/**
@@ -68,20 +67,21 @@ public class Test {
 		
 		try {
 			t = new Test();
+		//	t.testAssertions(3); // fails
 		}
 		catch (RuntimeException r) {
 			System.err.println(r.getMessage());
 		}
 		
 		try {
-			t.initializationTest();
+		//	t.initializationTest();
 		}
 		catch (RuntimeException r) {
 			System.err.println(r.getMessage());
 		}
 		
 		try {
-			t.assertionTest();
+		//	t.assertionTest();
 		}
 		catch (RuntimeException r) {
 			System.err.println(r.getMessage());
