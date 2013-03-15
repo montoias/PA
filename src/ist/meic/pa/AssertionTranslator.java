@@ -140,22 +140,17 @@ public class AssertionTranslator implements Translator {
 		final String template = "{"
 				+ "  if(!(%s))"
 				+ "    throw new RuntimeException(\"The assertion %s is false\");"
-				+ ""
-				+ "  $_ = $proceed($$);"
-				+ ""		
-				+ "  if(!(%s))"
-				+ "    throw new RuntimeException(\"The assertion %s is false\");"
 				+ "}";
 		
 		final String ctemplate = "{"
 				+ "  if(!(%s))"
 				+ "    throw new RuntimeException(\"The assertion %s is false\");"
-				+ "  $_ = $proceed($$);"
+//				+ "  $_ = $proceed($$);"
 				+ "}";
 		final String atemplate = "{"
 				+ "  if(!(%s))"
 				+ "    throw new RuntimeException(\"The assertion %s is false\");"
-				+ "  $proceed($$);"
+//				+ "  $proceed($$);"
 				+ "}";		
 
 		ctBehavior.instrument(new ExprEditor() {
@@ -165,20 +160,21 @@ public class AssertionTranslator implements Translator {
 				String annotation;
 				try {
 					annotation = checkSuperclass(mc.getMethod());
-					
 					if (!annotation.equals("")) {
-						String before = "";
-						String after = "";
-						String parse[] = annotation.split(" && ");
-						for(String s: parse){
-							if(s.contains("$_")){
-								after += after.equals("") ? s : " && " + s;
-							}
-							else {
-								before += before.equals("") ? s : " && " + s;
-							}
-						}
-						mc.replace(String.format(template, before, annotation, after, annotation));
+//						String before = "";
+//						String after = "";
+//						String parse[] = annotation.split(" && ");
+//						for(String s: parse){
+//							if(s.contains("$_")){
+//								after += after.equals("") ? s : " && " + s;
+//							}
+//							else {
+//								before += before.equals("") ? s : " && " + s;
+//							}
+//						}
+// before -				mc.replace(String.format(template, before, annotation, after, annotation));
+// after -
+						mc.getMethod().insertAfter(String.format(template, annotation, annotation));
 					}
 				} catch (NotFoundException e) {
 					System.out.println("Shouldn't happen.");
@@ -191,10 +187,9 @@ public class AssertionTranslator implements Translator {
 				String annotation;
 				try {
 					annotation = checkSuperclass(cc.getConstructor());
-					
 					if (!annotation.equals("")) {
-						cc.replace(String.format(atemplate, annotation,
-								annotation));
+					//	antes	cc.replace(String.format(atemplate, annotation,	annotation));
+						cc.getConstructor().insertBefore(String.format(atemplate, annotation, annotation));
 					}
 				} catch (NotFoundException e) {
 					System.out.println("Shouldn't happen.");
@@ -206,10 +201,10 @@ public class AssertionTranslator implements Translator {
 				String annotation;
 				try {
 					annotation = checkSuperclass(cc.getConstructor());
-					
+
 					if (!annotation.equals("")) {
-						cc.replace(String.format(ctemplate, annotation,
-								annotation));
+					//antes 	cc.replace(String.format(ctemplate, annotation,	annotation));
+						cc.getConstructor().insertBefore(String.format(ctemplate, annotation,	annotation));
 					}
 				} catch (NotFoundException e) {
 					System.out.println("Shouldn't happen.");
