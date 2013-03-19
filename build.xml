@@ -2,7 +2,6 @@
 <project name="CheckedAssertions" default="jar" basedir=".">
 
   <property name="classes.dir" value="classes"/>
-  <property name="bin.dir" value="bin"/>
   <property name="src.dir" value="src"/>
 
   <target name="init">
@@ -11,7 +10,6 @@
 
   <target name="clean">
     <delete dir="${classes.dir}"/>
-    <delete dir="${bin.dir}"/>
   	<delete file="checkassertions.jar"/>
   </target>
 
@@ -38,6 +36,7 @@
     <java classname="ist.meic.pa.CheckAssertions" fork="true">
       <classpath>
         <pathelement location="${classes.dir}"/>
+        <pathelement path="javassist.jar" />
       </classpath>
     </java>
   </target>

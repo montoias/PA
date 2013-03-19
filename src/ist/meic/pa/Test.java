@@ -17,6 +17,7 @@ public class Test{
 	String quux;
 	@Assertion("true")
 	int abc;
+	private String xuu = "xyz";
 
 
 	public Test() {}
@@ -33,6 +34,11 @@ public class Test{
 		quux = "foo"; 				//works
 		methodAssertions(baz);  	//fails
 		//baz = 0; 					//fails
+	}
+	
+	@Assertion("$1.length() > xuu.length()")
+	public void setXuu(String str) {
+		xuu = str;
 	}
 
 	/**
