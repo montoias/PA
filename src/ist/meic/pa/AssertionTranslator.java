@@ -1,5 +1,7 @@
 package ist.meic.pa;
 
+import java.io.IOException;
+
 import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CodeConverter;
@@ -27,7 +29,7 @@ public class AssertionTranslator implements Translator {
 
 	@Override
 	public void start(ClassPool arg0) throws NotFoundException,
-	CannotCompileException {
+			CannotCompileException {
 
 	}
 
@@ -62,12 +64,14 @@ public class AssertionTranslator implements Translator {
 	 * 
 	 * @param ctClass
 	 * @throws CannotCompileException
+	 * @throws NotFoundException
 	 */
-	private void makeAssertable(CtClass ctClass) throws CannotCompileException {
+	private void makeAssertable(CtClass ctClass) throws CannotCompileException,
+			NotFoundException {
 
 		for (CtBehavior ctBehavior : ctClass.getDeclaredBehaviors()) {
 			instrumentBehavior(ctBehavior);
-			assertBehavior(ctBehavior);
+			assertBehavior(ctBehavior, ctClass);
 		}
 	}
 
@@ -111,8 +115,7 @@ public class AssertionTranslator implements Translator {
 						template = "  {"
 								+ "  if(!(variables$notInit.contains(\"%s\")))"
 								+ "    throw new RuntimeException(\"Error: %s was not initialized\");"
-								+ "  $_ = $proceed($$);"
-								+ "} ";
+								+ "  $_ = $proceed($$);" + "} ";
 
 						String name = fa.getField().getName();
 						fa.replace(String.format(template, name, name, name));
@@ -129,7 +132,6 @@ public class AssertionTranslator implements Translator {
 		});
 	}
 
-
 	/**
 	 * TODO: Check method assertions upon function entry. TODO: Assert
 	 * constructors? Instruments the given method to interpret the Assertion
@@ -139,148 +141,148 @@ public class AssertionTranslator implements Translator {
 	 * @throws CannotCompileException
 	 */
 
-	/*	private void assertBehavior(CtBehavior ctBehavior) throws CannotCompileException {
-		final String template = "{"
-				+ "  if(!(%s))"
-				+ "    throw new RuntimeException(\"The assertion %s is false\");"
-				+ "}";
+	/*
+	 * private void assertBehavior(CtBehavior ctBehavior) throws
+	 * CannotCompileException { final String template = "{" + "  if(!(%s))" +
+	 * "    throw new RuntimeException(\"The assertion %s is false\");" + "}";
+	 * 
+	 * final String ctemplate = "{" + "  if(!(%s))" +
+	 * "    throw new RuntimeException(\"The assertion %s is false\");" // +
+	 * "  $_ = $proceed($$);" + "}"; final String atemplate = "{" +
+	 * "  if(!(%s))" +
+	 * "    throw new RuntimeException(\"The assertion %s is false\");" // +
+	 * "  $proceed($$);" + "}";
+	 * 
+	 * ctBehavior.instrument(new ExprEditor() {
+	 * 
+	 * public void edit(MethodCall mc) throws CannotCompileException {
+	 * 
+	 * String annotation; try { annotation = checkSuperclass(mc.getMethod()); if
+	 * (!annotation.equals("")) { // String before = ""; // String after = "";
+	 * // String parse[] = annotation.split(" && "); // for(String s: parse){ //
+	 * if(s.contains("$_")){ // after += after.equals("") ? s : " && " + s; // }
+	 * // else { // before += before.equals("") ? s : " && " + s; // } // } //
+	 * before - mc.replace(String.format(template, before, annotation, after,
+	 * annotation)); // after -
+	 * mc.getMethod().insertAfter(String.format(template, annotation,
+	 * annotation)); } } catch (NotFoundException e) {
+	 * System.out.println("Shouldn't happen."); }
+	 * 
+	 * }
+	 * 
+	 * public void edit(ConstructorCall cc) throws CannotCompileException {
+	 * 
+	 * String annotation; try { annotation =
+	 * checkSuperclass(cc.getConstructor()); if (!annotation.equals("")) { //
+	 * antes cc.replace(String.format(atemplate, annotation, annotation));
+	 * cc.getConstructor().insertBefore(String.format(atemplate, annotation,
+	 * annotation)); } } catch (NotFoundException e) {
+	 * System.out.println("Shouldn't happen."); }
+	 * 
+	 * }
+	 * 
+	 * public void edit(NewExpr cc) throws CannotCompileException { String
+	 * annotation; try { annotation = checkSuperclass(cc.getConstructor());
+	 * 
+	 * if (!annotation.equals("")) { //antes cc.replace(String.format(ctemplate,
+	 * annotation, annotation));
+	 * cc.getConstructor().insertBefore(String.format(ctemplate, annotation,
+	 * annotation)); } } catch (NotFoundException e) {
+	 * System.out.println("Shouldn't happen."); }
+	 * 
+	 * }
+	 * 
+	 * private String checkSuperclass(CtBehavior ctBehavior) { String annotation
+	 * = "";
+	 * 
+	 * try { CtClass nextClass = ctBehavior.getDeclaringClass().getSuperclass();
+	 * 
+	 * if(nextClass != null) { annotation =
+	 * checkSuperclass(nextClass.getDeclaredMethod(ctBehavior.getName())); } }
+	 * catch (NotFoundException e) { // If this exception is thrown, it means it
+	 * doesn't exist in the superclass, so there's nothing to do }
+	 * 
+	 * try {
+	 * 
+	 * if (ctBehavior.hasAnnotation(Assertion.class)) { String value =
+	 * ((Assertion) ctBehavior.getAnnotation(Assertion.class)).value();
+	 * annotation = annotation.equals("") ? value : annotation + " && " + value;
+	 * }
+	 * 
+	 * } catch (ClassNotFoundException e) { //Not supposed to happen }
+	 * 
+	 * return annotation; } }); }
+	 */
 
-		final String ctemplate = "{"
-				+ "  if(!(%s))"
-				+ "    throw new RuntimeException(\"The assertion %s is false\");"
-//				+ "  $_ = $proceed($$);"
-				+ "}";
-		final String atemplate = "{"
-				+ "  if(!(%s))"
-				+ "    throw new RuntimeException(\"The assertion %s is false\");"
-//				+ "  $proceed($$);"
-				+ "}";		
-
-		ctBehavior.instrument(new ExprEditor() {
-
-			public void edit(MethodCall mc) throws CannotCompileException {
-
-				String annotation;
-				try {
-					annotation = checkSuperclass(mc.getMethod());
-					if (!annotation.equals("")) {
-//						String before = "";
-//						String after = "";
-//						String parse[] = annotation.split(" && ");
-//						for(String s: parse){
-//							if(s.contains("$_")){
-//								after += after.equals("") ? s : " && " + s;
-//							}
-//							else {
-//								before += before.equals("") ? s : " && " + s;
-//							}
-//						}
-// before -				mc.replace(String.format(template, before, annotation, after, annotation));
-// after -
-						mc.getMethod().insertAfter(String.format(template, annotation, annotation));
-					}
-				} catch (NotFoundException e) {
-					System.out.println("Shouldn't happen.");
-				}
-
-			}
-
-			public void edit(ConstructorCall cc) throws CannotCompileException {
-
-				String annotation;
-				try {
-					annotation = checkSuperclass(cc.getConstructor());
-					if (!annotation.equals("")) {
-					//	antes	cc.replace(String.format(atemplate, annotation,	annotation));
-						cc.getConstructor().insertBefore(String.format(atemplate, annotation, annotation));
-					}
-				} catch (NotFoundException e) {
-					System.out.println("Shouldn't happen.");
-				}
-
-			}
-
-			public void edit(NewExpr cc) throws CannotCompileException {
-				String annotation;
-				try {
-					annotation = checkSuperclass(cc.getConstructor());
-
-					if (!annotation.equals("")) {
-					//antes 	cc.replace(String.format(ctemplate, annotation,	annotation));
-						cc.getConstructor().insertBefore(String.format(ctemplate, annotation,	annotation));
-					}
-				} catch (NotFoundException e) {
-					System.out.println("Shouldn't happen.");
-				}
-
-			}
-
-			private String checkSuperclass(CtBehavior ctBehavior) {
-				String annotation = "";
-
-				try {
-					CtClass nextClass = ctBehavior.getDeclaringClass().getSuperclass();
-
-					if(nextClass != null) {
-						annotation = checkSuperclass(nextClass.getDeclaredMethod(ctBehavior.getName()));
-					}
-				} catch (NotFoundException e) {
-					// If this exception is thrown, it means it doesn't exist in the superclass, so there's nothing to do
-				}
-
-				try {
-
-					if (ctBehavior.hasAnnotation(Assertion.class)) {
-						String value = ((Assertion) ctBehavior.getAnnotation(Assertion.class)).value();
-						annotation = annotation.equals("") ? value : annotation + " && " + value;
-					}
-
-				}
-				catch (ClassNotFoundException e) {
-					//Not supposed to happen
-				}
-
-				return annotation;
-			}
-		});
-	} */
-
-	private void assertBehavior(CtBehavior ctBehavior) throws CannotCompileException {
-		if(ctBehavior.hasAnnotation(Assertion.class)) {
+	private void assertBehavior(CtBehavior ctBehavior, CtClass ctClass)
+			throws CannotCompileException, NotFoundException {
+		if (ctBehavior.hasAnnotation(Assertion.class)) {
 			String annotation = checkSuperclass(ctBehavior);
 
 			String before = "";
 			String after = "";
 			String parse[] = annotation.split(" && ");
-			for(String s: parse){
-				if(s.contains("$_")){
+			for (String s : parse) {
+				if (s.contains("$_")) {
 					after += after.equals("") ? s : " && " + s;
-				}
-				else {
+				} else {
 					before += before.equals("") ? s : " && " + s;
 				}
 			}
 
-			String beforeBytecode = "{"
-					+ "  if(!(" + before + "))"
-					+ "    throw new RuntimeException(\"The assertion " + annotation + " is false\");"
-					+ "}";
+			String annotationReplaced = annotation.replace("$_", "res");
+			
+			if (ctBehavior.getMethodInfo().isMethod()) {
+				CtMethod oldMethod = (CtMethod) ctBehavior;
+				CtMethod newMethod = CtNewMethod.copy(oldMethod, oldMethod.getName(), ctClass, null);
 
-			String afterBytecode = "{"
-					+ "  if(!(" + after + "))"
-					+ "    throw new RuntimeException(\"The assertion " + annotation + " is false\");"
-					+ "}";
+				oldMethod.setName(oldMethod.getName() + "$orig");
+				
+//				System.out.println("{ " 
+//						+ oldMethod.getReturnType().getName() +" res = " + oldMethod.getName() + "($$);"
+//						+ " if(!(" + annotationReplaced + "))"
+//						+ "    throw new RuntimeException(\"The assertion " + annotationReplaced + " is false\");"
+//						+ " return res; } ");
+				
+				if (!oldMethod.getReturnType().getName().equalsIgnoreCase("void")) {
+					
+					newMethod.setBody("{ " 
+							+ oldMethod.getReturnType().getName() +" res = $proceed($$);"
+							+ " if(!(" + annotationReplaced + "))"
+							+ "    throw new RuntimeException(\"The assertion " + annotationReplaced + " is false\");"
+							+ " return res; } ", "this", oldMethod.getName());
+					
+					ctClass.addMethod(newMethod);
+					
+				} else {
+					
+				}
+			} else if (ctBehavior.getMethodInfo().isConstructor()) {
 
-			if(!before.equals("")) {
-				if(ctBehavior.getMethodInfo().isMethod()) {
-					ctBehavior.insertBefore(beforeBytecode);
-				}
-				else if (ctBehavior.getMethodInfo().isConstructor()) {
-					((CtConstructor) ctBehavior).insertBeforeBody(beforeBytecode);
-				}
 			}
-			if(!after.equals(""))
-				ctBehavior.insertAfter(afterBytecode);
+
+			// String beforeBytecode = "{"
+			// + "  if(!(" + before + "))"
+			// + "    throw new RuntimeException(\"The assertion " + annotation
+			// + " is false\");"
+			// + "}";
+			//
+			// String afterBytecode = "{"
+			// + "  if(!(" + after + "))"
+			// + "    throw new RuntimeException(\"The assertion " + annotation
+			// + " is false\");"
+			// + "}";
+			//
+			// if(!before.equals("")) {
+			// if(ctBehavior.getMethodInfo().isMethod()) {
+			// ctBehavior.insertBefore(beforeBytecode);
+			// }
+			// else if (ctBehavior.getMethodInfo().isConstructor()) {
+			// ((CtConstructor) ctBehavior).insertBeforeBody(beforeBytecode);
+			// }
+			// }
+			// if(!after.equals(""))
+			// ctBehavior.insertAfter(afterBytecode);
 		}
 	}
 
@@ -290,23 +292,26 @@ public class AssertionTranslator implements Translator {
 		try {
 			CtClass nextClass = ctBehavior.getDeclaringClass().getSuperclass();
 
-			if(nextClass != null) {
-				annotation = checkSuperclass(nextClass.getDeclaredMethod(ctBehavior.getName()));
+			if (nextClass != null) {
+				annotation = checkSuperclass(nextClass
+						.getDeclaredMethod(ctBehavior.getName()));
 			}
 		} catch (NotFoundException e) {
-			// If this exception is thrown, it means it doesn't exist in the superclass, so there's nothing to do
+			// If this exception is thrown, it means it doesn't exist in the
+			// superclass, so there's nothing to do
 		}
 
 		try {
 
 			if (ctBehavior.hasAnnotation(Assertion.class)) {
-				String value = ((Assertion) ctBehavior.getAnnotation(Assertion.class)).value();
-				annotation = annotation.equals("") ? value : annotation + " && " + value;
+				String value = ((Assertion) ctBehavior
+						.getAnnotation(Assertion.class)).value();
+				annotation = annotation.equals("") ? value : annotation
+						+ " && " + value;
 			}
 
-		}
-		catch (ClassNotFoundException e) {
-			//Not supposed to happen
+		} catch (ClassNotFoundException e) {
+			// Not supposed to happen
 		}
 
 		return annotation;
