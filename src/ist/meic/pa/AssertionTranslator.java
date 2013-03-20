@@ -230,35 +230,23 @@ public class AssertionTranslator implements Translator {
 				}
 			}
 
-			String annotationReplaced = annotation.replace("$_", "res");
-			
+
 			if (ctBehavior.getMethodInfo().isMethod()) {
-				CtMethod oldMethod = (CtMethod) ctBehavior;
-				CtMethod newMethod = CtNewMethod.copy(oldMethod, oldMethod.getName(), ctClass, null);
-
-				oldMethod.setName(oldMethod.getName() + "$orig");
+				CtMethod originalMethod = (CtMethod) ctBehavior;
+				String methodName = originalMethod.getName();
 				
-//				System.out.println("{ " 
-//						+ oldMethod.getReturnType().getName() +" res = " + oldMethod.getName() + "($$);"
-//						+ " if(!(" + annotationReplaced + "))"
-//						+ "    throw new RuntimeException(\"The assertion " + annotationReplaced + " is false\");"
-//						+ " return res; } ");
+				CtMethod newMethod = CtNewMethod.copy(originalMethod, methodName ,ctClass, null);
+				originalMethod.setName(methodName + "$orig");
 				
-				if (!oldMethod.getReturnType().getName().equalsIgnoreCase("void")) {
-					
-					newMethod.setBody("{ " 
-							+ oldMethod.getReturnType().getName() +" res = $proceed($$);"
-							+ " if(!(" + annotationReplaced + "))"
-							+ "    throw new RuntimeException(\"The assertion " + annotationReplaced + " is false\");"
-							+ " return res; } ", "this", oldMethod.getName());
-					
-					ctClass.addMethod(newMethod);
-					
-				} else {
-					
-				}
+				newMethod.setBody("return " + originalMethod.getName() + "($$);" );
+				newMethod.insertAfter("if(!(" + annotation + "))"
+					+ "    throw new RuntimeException(\"The assertion "
+					+ annotation + " is false\");");
+				
+				ctClass.addMethod(newMethod);
+				
 			} else if (ctBehavior.getMethodInfo().isConstructor()) {
-
+	
 			}
 
 			// String beforeBytecode = "{"
