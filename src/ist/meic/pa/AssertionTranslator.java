@@ -1,24 +1,19 @@
 package ist.meic.pa;
 
-import java.io.IOException;
-
+import ist.meic.pa.annotations.Assertion;
+import ist.meic.pa.annotations.AssertionBefore;
 import javassist.CannotCompileException;
 import javassist.ClassPool;
-import javassist.CodeConverter;
 import javassist.CtBehavior;
 import javassist.CtClass;
 import javassist.CtConstructor;
 import javassist.CtField;
 import javassist.CtMethod;
-import javassist.CtNewConstructor;
 import javassist.CtNewMethod;
 import javassist.NotFoundException;
 import javassist.Translator;
-import javassist.expr.ConstructorCall;
 import javassist.expr.ExprEditor;
 import javassist.expr.FieldAccess;
-import javassist.expr.MethodCall;
-import javassist.expr.NewExpr;
 
 /**
  * TODO: @miguel a nice description for the class is needed.
@@ -145,9 +140,12 @@ public class AssertionTranslator implements Translator {
 			throws CannotCompileException, NotFoundException {
 		if (ctBehavior.hasAnnotation(Assertion.class)) {
 			String annotation = checkSuperclass(ctBehavior);
+			String template = " if(!(%s))"
+					+ "    throw new RuntimeException(\"The assertion %s is false\");";
 
 			if (ctBehavior.getMethodInfo().isMethod()) {
 				String before = "";
+
 				String parse[] = annotation.split(" && ");
 				for (String s : parse) {
 					if (!s.contains("$_")) {
@@ -156,30 +154,51 @@ public class AssertionTranslator implements Translator {
 				}
 
 				CtMethod originalMethod = (CtMethod) ctBehavior;
-				String methodName = originalMethod.getName();
-				
-				CtMethod newMethod = CtNewMethod.copy(originalMethod, methodName ,ctClass, null);
-				originalMethod.setName(methodName + "$orig");
-				
-				newMethod.setBody("return " + originalMethod.getName() + "($$);" );
-				newMethod.insertAfter("if(!(" + annotation + "))"
-					+ "    throw new RuntimeException(\"The assertion "
-					+ annotation + " is false\");");
-				
+				String originalMethodName = originalMethod.getName();
+				String newMethodName = originalMethodName + "$orig";
+
+				CtMethod newMethod = CtNewMethod.copy(originalMethod,
+						originalMethodName, ctClass, null);
+				originalMethod.setName(newMethodName);
+
+				newMethod.setBody("return " + newMethodName + "($$);");
+				newMethod.insertAfter(String.format(template, annotation, annotation));
+
+				if (ctBehavior.hasAnnotation(AssertionBefore.class)) {
+					String assertionBefore = null;
+					try {
+						assertionBefore = ((AssertionBefore) ctBehavior.getAnnotation(AssertionBefore.class)).value();
+					} catch (ClassNotFoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					newMethod.insertBefore(String.format(template, assertionBefore, assertionBefore));
+				}
+
 				ctClass.addMethod(newMethod);
-				
+
 			} else if (ctBehavior.getMethodInfo().isConstructor()) {
-				CtConstructor originalConstructor = (CtConstructor) ctBehavior;
-				String constructorName = originalConstructor.getName();
-				
-				CtMethod newMethod = originalConstructor.toMethod(constructorName + "$orig", ctClass);
+				CtConstructor ctConstructor = (CtConstructor) ctBehavior;
+				String constructorName = ctConstructor.getName();
+				String newMethodName = constructorName + "$orig";
+
+				CtMethod newMethod = ctConstructor.toMethod(newMethodName,
+						ctClass);
 				ctClass.addMethod(newMethod);
-				
-				originalConstructor.setBody("return " + newMethod.getName() + "($$);" );
-				originalConstructor.insertAfter("if(!(" + annotation + "))"
-					+ "    throw new RuntimeException(\"The assertion "
-					+ annotation + " is false\");");
-				
+
+				ctConstructor.setBody("return " + newMethodName + "($$);");
+				ctConstructor.insertAfter(String.format(template, annotation, annotation));
+
+				if (ctBehavior.hasAnnotation(AssertionBefore.class)) {
+					String assertionBefore = null;
+					try {
+						assertionBefore = ((AssertionBefore) ctBehavior.getAnnotation(AssertionBefore.class)).value();
+					} catch (ClassNotFoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					ctConstructor.insertBeforeBody(String.format(template, assertionBefore, assertionBefore));
+				}
 			}
 		}
 	}

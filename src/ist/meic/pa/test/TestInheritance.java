@@ -1,4 +1,6 @@
-package ist.meic.pa;
+package ist.meic.pa.test;
+
+import ist.meic.pa.annotations.Assertion;
 
 public class TestInheritance extends Test{
 

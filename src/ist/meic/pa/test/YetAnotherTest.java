@@ -1,4 +1,4 @@
-package ist.meic.pa;
+package ist.meic.pa.test;
 
 public class YetAnotherTest {
 
