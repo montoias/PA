@@ -6,6 +6,6 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target( { ElementType.METHOD, ElementType.FIELD, ElementType.CONSTRUCTOR } ) 
-public @interface AssertionBefore {
+public @interface AssertionExtra {
 	String value();
 }

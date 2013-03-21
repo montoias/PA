@@ -16,25 +16,17 @@ public class TestMethodArguments {
 		return a;
 	}
 
-	@Assertion("$1.size() > $_.size()")
-	@AssertionBefore("$1.size()>0")
+	@AssertionExtra("($1.size()>1) && ($1.size() > $_.size())")
 	public ArrayList<String> test2(ArrayList<String> a) {
-		a.add("a");
+		a.remove("data");
 		a = new ArrayList<String>();
 		return a;
 	}
 
 	public static void main(String[] args) {
 		
-		try {
-			ArrayList <String> a = new ArrayList<String>();
-			TestMethodArguments test = new TestMethodArguments();
-			test.test2(a);
-		} catch (RuntimeException r) {
-			System.err.println(r.getMessage());
-		}
 		
-		/*TestMethodArguments test = new TestMethodArguments();
+		TestMethodArguments test = new TestMethodArguments();
 		ArrayList<String> array = new ArrayList<String>();
 		array.add("data");
 		array.add("someMoreData");
@@ -49,7 +41,7 @@ public class TestMethodArguments {
 			test.test2(array); // pass
 		} catch (RuntimeException r) {
 			System.err.println(r.getMessage());
-		}*/
+		}
 
 	}
 }

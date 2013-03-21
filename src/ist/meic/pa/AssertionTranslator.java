@@ -1,7 +1,7 @@
 package ist.meic.pa;
 
 import ist.meic.pa.annotations.Assertion;
-import ist.meic.pa.annotations.AssertionBefore;
+import ist.meic.pa.annotations.AssertionExtra;
 import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CtBehavior;
@@ -18,14 +18,14 @@ import javassist.expr.FieldAccess;
 /**
  * TODO: @miguel a nice description for the class is needed.
  * 
- * @author groupXX
+ * @author group3
  * 
  */
 public class AssertionTranslator implements Translator {
 
 	@Override
 	public void start(ClassPool arg0) throws NotFoundException,
-			CannotCompileException {
+	CannotCompileException {
 
 	}
 
@@ -56,44 +56,39 @@ public class AssertionTranslator implements Translator {
 	}
 
 	/**
-	 * The "Assertion" annotations are now interpreted in the given class.
+	 * The "Assertion" annotations are interpreted in the given class. The
+	 * "AssertionBefore" annotations are also interpreted in the given class.
 	 * 
 	 * @param ctClass
 	 * @throws CannotCompileException
 	 * @throws NotFoundException
 	 */
 	private void makeAssertable(CtClass ctClass) throws CannotCompileException,
-			NotFoundException {
+	NotFoundException {
 
 		for (CtBehavior ctBehavior : ctClass.getDeclaredBehaviors()) {
-			instrumentBehavior(ctBehavior);
+			assertBehaviorField(ctBehavior);
 			assertBehavior(ctBehavior, ctClass);
 		}
 	}
 
 	/**
-	 * TODO: Rethink name. TODO: Check field initialization upon function entry.
-	 * TODO: Check if reader exception is correct. Returns an ExprEditor with a
-	 * given template for Assertion annotations. It has both cases when the
-	 * Field Access is a read, or a write. The ExprEditor is later used to
-	 * instrument a method/constructor.
-	 * 
-	 * @return
-	 */
-	/**
-	 * TODO: Rethink name; AssertMethodFields perhaps?
+	 * Returns an ExprEditor with a given template for Assertion annotations. It
+	 * has both cases when the Field Access is a read, or a write. The
+	 * ExprEditor is later used to instrument a method/constructor.
 	 * 
 	 * @param ctBehavior
 	 * @throws CannotCompileException
 	 */
-	private void instrumentBehavior(CtBehavior ctBehavior)
+	private void assertBehaviorField(CtBehavior ctBehavior)
 			throws CannotCompileException {
 		ctBehavior.instrument(new ExprEditor() {
 
 			public void edit(FieldAccess fa) throws CannotCompileException {
 				try {
-					final String template;
+					String template;
 					CtField ctField = fa.getField();
+
 					if (fa.isWriter() && ctField.hasAnnotation(Assertion.class)) {
 						template = "  {"
 								+ "  $0.%s = $1;"
@@ -102,10 +97,10 @@ public class AssertionTranslator implements Translator {
 								+ "  variables$notInit.add(\"%s\");" + "} ";
 
 						String name = fa.getField().getName();
-						String annotation = ((Assertion) ctField
+						String assertion = ((Assertion) ctField
 								.getAnnotation(Assertion.class)).value();
-						fa.replace(String.format(template, name, annotation,
-								annotation, name));
+						fa.replace(String.format(template, name, assertion,
+								assertion, name));
 					} else if (fa.isReader()
 							&& ctField.hasAnnotation(Assertion.class)) {
 						template = "  {"
@@ -118,10 +113,8 @@ public class AssertionTranslator implements Translator {
 					}
 
 				} catch (NotFoundException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} catch (ClassNotFoundException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -129,89 +122,106 @@ public class AssertionTranslator implements Translator {
 	}
 
 	/**
-	 * TODO: Check method assertions upon function entry. TODO: Assert
-	 * constructors? Instruments the given method to interpret the Assertion
-	 * annotations.
+	 * Instruments the given method to interpret the "Assertion" annotations.
+	 * Checks for the "Assertion" annotations in superclasses too. The same goes
+	 * for "AssertionBefore" annotations.
 	 * 
 	 * @param ctBehavior
 	 * @throws CannotCompileException
 	 */
 	private void assertBehavior(CtBehavior ctBehavior, CtClass ctClass)
 			throws CannotCompileException, NotFoundException {
+
+		String template = " if(!(%s))"
+				+ "    throw new RuntimeException(\"The assertion %s is false\");";
+		String assertion = null;
+
 		if (ctBehavior.hasAnnotation(Assertion.class)) {
-			String annotation = checkSuperclass(ctBehavior);
-			String template = " if(!(%s))"
-					+ "    throw new RuntimeException(\"The assertion %s is false\");";
-
+			assertion = checkSuperclass(ctBehavior, "Assertion");
+		}
+		else if (ctBehavior.hasAnnotation(AssertionExtra.class)) {
+			assertion = checkSuperclass(ctBehavior, "AssertionExtra");
+		}
+		
+		if(assertion != null) {
 			if (ctBehavior.getMethodInfo().isMethod()) {
-				String before = "";
-
-				String parse[] = annotation.split(" && ");
-				for (String s : parse) {
-					if (!s.contains("$_")) {
-						before += before.equals("") ? s : " && " + s;
-					}
-				}
-
-				CtMethod originalMethod = (CtMethod) ctBehavior;
-				String originalMethodName = originalMethod.getName();
-				String newMethodName = originalMethodName + "$orig";
-
-				CtMethod newMethod = CtNewMethod.copy(originalMethod,
-						originalMethodName, ctClass, null);
-				originalMethod.setName(newMethodName);
-
-				newMethod.setBody("return " + newMethodName + "($$);");
-				newMethod.insertAfter(String.format(template, annotation, annotation));
-
-				if (ctBehavior.hasAnnotation(AssertionBefore.class)) {
-					String assertionBefore = null;
-					try {
-						assertionBefore = ((AssertionBefore) ctBehavior.getAnnotation(AssertionBefore.class)).value();
-					} catch (ClassNotFoundException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					newMethod.insertBefore(String.format(template, assertionBefore, assertionBefore));
-				}
-
-				ctClass.addMethod(newMethod);
-
+				assertMethod((CtMethod) ctBehavior, ctClass, template,
+						assertion);
 			} else if (ctBehavior.getMethodInfo().isConstructor()) {
-				CtConstructor ctConstructor = (CtConstructor) ctBehavior;
-				String constructorName = ctConstructor.getName();
-				String newMethodName = constructorName + "$orig";
-
-				CtMethod newMethod = ctConstructor.toMethod(newMethodName,
-						ctClass);
-				ctClass.addMethod(newMethod);
-
-				ctConstructor.setBody("return " + newMethodName + "($$);");
-				ctConstructor.insertAfter(String.format(template, annotation, annotation));
-
-				if (ctBehavior.hasAnnotation(AssertionBefore.class)) {
-					String assertionBefore = null;
-					try {
-						assertionBefore = ((AssertionBefore) ctBehavior.getAnnotation(AssertionBefore.class)).value();
-					} catch (ClassNotFoundException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					ctConstructor.insertBeforeBody(String.format(template, assertionBefore, assertionBefore));
-				}
+				assertConstructor((CtConstructor) ctBehavior, ctClass,
+						template, assertion);
 			}
 		}
 	}
 
-	private String checkSuperclass(CtBehavior ctBehavior) {
-		String annotation = "";
+	private void assertConstructor(CtConstructor ctConstructor, CtClass ctClass,
+			String template, String assertion) throws CannotCompileException {
+
+		if(ctConstructor.hasAnnotation(Assertion.class)){
+			String constructorName = ctConstructor.getName();
+			String newMethodName = constructorName + "$orig";
+
+			CtMethod newMethod = ctConstructor.toMethod(newMethodName,
+					ctClass);
+			ctClass.addMethod(newMethod);
+
+			ctConstructor.setBody("return " + newMethodName + "($$);");
+			ctConstructor.insertAfter(String.format(template, assertion,
+					assertion));
+		}
+		else if (ctConstructor.hasAnnotation(AssertionExtra.class)) {
+			ctConstructor.insertBeforeBody(String.format(template,
+					assertion, assertion));
+		}
+	}
+
+	private void assertMethod(CtMethod originalMethod, CtClass ctClass,
+			String template, String assertion) throws CannotCompileException,
+			NotFoundException {
+
+		String originalMethodName = originalMethod.getName();
+		String newMethodName = originalMethodName + "$orig";
+
+		CtMethod newMethod = CtNewMethod.copy(originalMethod,
+				newMethodName, ctClass, null);
+		
+		ctClass.addMethod(newMethod);
+
+		originalMethod.setBody("return " + newMethodName + "($$);");
+		
+		if (originalMethod.hasAnnotation(Assertion.class)) {
+			originalMethod.insertAfter(String.format(template, assertion, assertion));
+		}
+		else if (originalMethod.hasAnnotation(AssertionExtra.class)) {
+			String parse[] = assertion.split(" && ");
+			String assertionBefore = "";
+			String assertionAfter = "";
+			
+			for (String s : parse) {
+				if (!s.contains("$_")) {
+					assertionBefore += assertionBefore.equals("") ? s : " && " + s;
+				}
+				else {
+					assertionAfter += assertionAfter.equals("") ? s : " && " + s;
+				}
+			}
+			
+			originalMethod.insertBefore(String.format(template, assertionBefore,
+					assertion));
+			originalMethod.insertAfter(String.format(template, assertionAfter, assertion));
+		}
+
+	}
+
+	private String checkSuperclass(CtBehavior ctBehavior, String assertionClass) {
+		String assertion = null;
 
 		try {
 			CtClass nextClass = ctBehavior.getDeclaringClass().getSuperclass();
 
 			if (nextClass != null) {
-				annotation = checkSuperclass(nextClass
-						.getDeclaredMethod(ctBehavior.getName()));
+				assertion = checkSuperclass(nextClass
+						.getDeclaredMethod(ctBehavior.getName()), assertionClass);
 			}
 		} catch (NotFoundException e) {
 			// If this exception is thrown, it means it doesn't exist in the
@@ -219,18 +229,24 @@ public class AssertionTranslator implements Translator {
 		}
 
 		try {
-
-			if (ctBehavior.hasAnnotation(Assertion.class)) {
-				String value = ((Assertion) ctBehavior
-						.getAnnotation(Assertion.class)).value();
-				annotation = annotation.equals("") ? value : annotation
-						+ " && " + value;
+			String value = null;
+			
+			if (assertionClass.equals("Assertion") && ctBehavior.hasAnnotation(Assertion.class)) {
+				value = ((Assertion) ctBehavior.getAnnotation(Assertion.class)).value();
+				
 			}
-
+			else if (assertionClass.equals("AssertionExtra") && ctBehavior.hasAnnotation(AssertionExtra.class)) {
+				value = ((AssertionExtra) ctBehavior.getAnnotation(AssertionExtra.class)).value();
+			}
+			
+			if(value != null) {
+				assertion = (assertion == null) ? value : assertion + " && "
+						+ value;
+			}
 		} catch (ClassNotFoundException e) {
 			// Not supposed to happen
 		}
 
-		return annotation;
+		return assertion;
 	}
 }
