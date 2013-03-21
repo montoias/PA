@@ -1,7 +1,7 @@
 PA
 ==
 
-Inject code in methods to store initial variables, in order to check method assertions at entry and exit of the code.
+Check all fields involved in assertions. 
 
 Check array initialization.
 
