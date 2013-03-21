@@ -2,8 +2,9 @@ package ist.meic.pa;
 import javassist.*;
 
 /**
- * TODO: class description
- * @author groupXX
+ * Loads the class passed as argument and instruments it according
+ * to the AssertionTranslator.
+ * @author group3
  *
  */
 public class CheckAssertions {

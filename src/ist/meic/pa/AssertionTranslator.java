@@ -1,7 +1,7 @@
 package ist.meic.pa;
 
 import ist.meic.pa.annotations.Assertion;
-import ist.meic.pa.annotations.AssertionExtra;
+import ist.meic.pa.annotations.ExtendedAssertion;
 import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CtBehavior;
@@ -16,7 +16,8 @@ import javassist.expr.ExprEditor;
 import javassist.expr.FieldAccess;
 
 /**
- * TODO: @miguel a nice description for the class is needed.
+ * This class allows the user to instrument fields, methods and constructors
+ * that have the "Assertion/ExtendedAssertion" annotation".
  * 
  * @author group3
  * 
@@ -122,9 +123,9 @@ public class AssertionTranslator implements Translator {
 	}
 
 	/**
-	 * Instruments the given method to interpret the "Assertion" annotations.
+	 * Instruments the given behavior to interpret the "Assertion" annotations.
 	 * Checks for the "Assertion" annotations in superclasses too. The same goes
-	 * for "AssertionBefore" annotations.
+	 * for "ExtendedAssertion" annotations.
 	 * 
 	 * @param ctBehavior
 	 * @throws CannotCompileException
@@ -139,8 +140,8 @@ public class AssertionTranslator implements Translator {
 		if (ctBehavior.hasAnnotation(Assertion.class)) {
 			assertion = checkSuperclass(ctBehavior, "Assertion");
 		}
-		else if (ctBehavior.hasAnnotation(AssertionExtra.class)) {
-			assertion = checkSuperclass(ctBehavior, "AssertionExtra");
+		else if (ctBehavior.hasAnnotation(ExtendedAssertion.class)) {
+			assertion = checkSuperclass(ctBehavior, "ExtendedAssertion");
 		}
 		
 		if(assertion != null) {
@@ -154,6 +155,16 @@ public class AssertionTranslator implements Translator {
 		}
 	}
 
+	/**
+	 * Instruments the given constructor to interpret the "Assertion" annotations.
+	 * The same goes for "ExtendedAssertion" annotations.
+	 * 
+	 * @param ctConstructor
+	 * @param ctClass
+	 * @param template
+	 * @param assertion
+	 * @throws CannotCompileException
+	 */
 	private void assertConstructor(CtConstructor ctConstructor, CtClass ctClass,
 			String template, String assertion) throws CannotCompileException {
 
@@ -169,12 +180,23 @@ public class AssertionTranslator implements Translator {
 			ctConstructor.insertAfter(String.format(template, assertion,
 					assertion));
 		}
-		else if (ctConstructor.hasAnnotation(AssertionExtra.class)) {
+		else if (ctConstructor.hasAnnotation(ExtendedAssertion.class)) {
 			ctConstructor.insertBeforeBody(String.format(template,
 					assertion, assertion));
 		}
 	}
 
+	/**
+	 * Instruments the given method to interpret the "Assertion" annotations.
+	 * The same goes for "ExtendedAssertion" annotations.
+	 * 
+	 * @param originalMethod
+	 * @param ctClass
+	 * @param template
+	 * @param assertion
+	 * @throws CannotCompileException
+	 * @throws NotFoundException
+	 */
 	private void assertMethod(CtMethod originalMethod, CtClass ctClass,
 			String template, String assertion) throws CannotCompileException,
 			NotFoundException {
@@ -192,7 +214,7 @@ public class AssertionTranslator implements Translator {
 		if (originalMethod.hasAnnotation(Assertion.class)) {
 			originalMethod.insertAfter(String.format(template, assertion, assertion));
 		}
-		else if (originalMethod.hasAnnotation(AssertionExtra.class)) {
+		else if (originalMethod.hasAnnotation(ExtendedAssertion.class)) {
 			String parse[] = assertion.split(" && ");
 			String assertionBefore = "";
 			String assertionAfter = "";
@@ -213,6 +235,15 @@ public class AssertionTranslator implements Translator {
 
 	}
 
+	/**
+	 * Checks for the annotation given by assertionClass in the behavior
+	 * passed by ctBehavior. It also traverses the superclasses to check
+	 * for annotations in the same behavior, but of the superclass.
+	 * 
+	 * @param ctBehavior
+	 * @param assertionClass
+	 * @return
+	 */
 	private String checkSuperclass(CtBehavior ctBehavior, String assertionClass) {
 		String assertion = null;
 
@@ -235,8 +266,8 @@ public class AssertionTranslator implements Translator {
 				value = ((Assertion) ctBehavior.getAnnotation(Assertion.class)).value();
 				
 			}
-			else if (assertionClass.equals("AssertionExtra") && ctBehavior.hasAnnotation(AssertionExtra.class)) {
-				value = ((AssertionExtra) ctBehavior.getAnnotation(AssertionExtra.class)).value();
+			else if (assertionClass.equals("ExtendedAssertion") && ctBehavior.hasAnnotation(ExtendedAssertion.class)) {
+				value = ((ExtendedAssertion) ctBehavior.getAnnotation(ExtendedAssertion.class)).value();
 			}
 			
 			if(value != null) {

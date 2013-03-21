@@ -16,7 +16,7 @@ public class TestMethodArguments {
 		return a;
 	}
 
-	@AssertionExtra("($1.size()>1) && ($1.size() > $_.size())")
+	@ExtendedAssertion("($1.size()>1) && ($1.size() > $_.size())")
 	public ArrayList<String> test2(ArrayList<String> a) {
 		a.remove("data");
 		a = new ArrayList<String>();
