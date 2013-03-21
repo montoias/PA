@@ -10,6 +10,7 @@ import javassist.CtClass;
 import javassist.CtConstructor;
 import javassist.CtField;
 import javassist.CtMethod;
+import javassist.CtNewConstructor;
 import javassist.CtNewMethod;
 import javassist.NotFoundException;
 import javassist.Translator;
@@ -140,98 +141,20 @@ public class AssertionTranslator implements Translator {
 	 * @param ctBehavior
 	 * @throws CannotCompileException
 	 */
-
-	/*
-	 * private void assertBehavior(CtBehavior ctBehavior) throws
-	 * CannotCompileException { final String template = "{" + "  if(!(%s))" +
-	 * "    throw new RuntimeException(\"The assertion %s is false\");" + "}";
-	 * 
-	 * final String ctemplate = "{" + "  if(!(%s))" +
-	 * "    throw new RuntimeException(\"The assertion %s is false\");" // +
-	 * "  $_ = $proceed($$);" + "}"; final String atemplate = "{" +
-	 * "  if(!(%s))" +
-	 * "    throw new RuntimeException(\"The assertion %s is false\");" // +
-	 * "  $proceed($$);" + "}";
-	 * 
-	 * ctBehavior.instrument(new ExprEditor() {
-	 * 
-	 * public void edit(MethodCall mc) throws CannotCompileException {
-	 * 
-	 * String annotation; try { annotation = checkSuperclass(mc.getMethod()); if
-	 * (!annotation.equals("")) { // String before = ""; // String after = "";
-	 * // String parse[] = annotation.split(" && "); // for(String s: parse){ //
-	 * if(s.contains("$_")){ // after += after.equals("") ? s : " && " + s; // }
-	 * // else { // before += before.equals("") ? s : " && " + s; // } // } //
-	 * before - mc.replace(String.format(template, before, annotation, after,
-	 * annotation)); // after -
-	 * mc.getMethod().insertAfter(String.format(template, annotation,
-	 * annotation)); } } catch (NotFoundException e) {
-	 * System.out.println("Shouldn't happen."); }
-	 * 
-	 * }
-	 * 
-	 * public void edit(ConstructorCall cc) throws CannotCompileException {
-	 * 
-	 * String annotation; try { annotation =
-	 * checkSuperclass(cc.getConstructor()); if (!annotation.equals("")) { //
-	 * antes cc.replace(String.format(atemplate, annotation, annotation));
-	 * cc.getConstructor().insertBefore(String.format(atemplate, annotation,
-	 * annotation)); } } catch (NotFoundException e) {
-	 * System.out.println("Shouldn't happen."); }
-	 * 
-	 * }
-	 * 
-	 * public void edit(NewExpr cc) throws CannotCompileException { String
-	 * annotation; try { annotation = checkSuperclass(cc.getConstructor());
-	 * 
-	 * if (!annotation.equals("")) { //antes cc.replace(String.format(ctemplate,
-	 * annotation, annotation));
-	 * cc.getConstructor().insertBefore(String.format(ctemplate, annotation,
-	 * annotation)); } } catch (NotFoundException e) {
-	 * System.out.println("Shouldn't happen."); }
-	 * 
-	 * }
-	 * 
-	 * private String checkSuperclass(CtBehavior ctBehavior) { String annotation
-	 * = "";
-	 * 
-	 * try { CtClass nextClass = ctBehavior.getDeclaringClass().getSuperclass();
-	 * 
-	 * if(nextClass != null) { annotation =
-	 * checkSuperclass(nextClass.getDeclaredMethod(ctBehavior.getName())); } }
-	 * catch (NotFoundException e) { // If this exception is thrown, it means it
-	 * doesn't exist in the superclass, so there's nothing to do }
-	 * 
-	 * try {
-	 * 
-	 * if (ctBehavior.hasAnnotation(Assertion.class)) { String value =
-	 * ((Assertion) ctBehavior.getAnnotation(Assertion.class)).value();
-	 * annotation = annotation.equals("") ? value : annotation + " && " + value;
-	 * }
-	 * 
-	 * } catch (ClassNotFoundException e) { //Not supposed to happen }
-	 * 
-	 * return annotation; } }); }
-	 */
-
 	private void assertBehavior(CtBehavior ctBehavior, CtClass ctClass)
 			throws CannotCompileException, NotFoundException {
 		if (ctBehavior.hasAnnotation(Assertion.class)) {
 			String annotation = checkSuperclass(ctBehavior);
 
-			String before = "";
-			String after = "";
-			String parse[] = annotation.split(" && ");
-			for (String s : parse) {
-				if (s.contains("$_")) {
-					after += after.equals("") ? s : " && " + s;
-				} else {
-					before += before.equals("") ? s : " && " + s;
-				}
-			}
-
-
 			if (ctBehavior.getMethodInfo().isMethod()) {
+				String before = "";
+				String parse[] = annotation.split(" && ");
+				for (String s : parse) {
+					if (!s.contains("$_")) {
+						before += before.equals("") ? s : " && " + s;
+					}
+				}
+
 				CtMethod originalMethod = (CtMethod) ctBehavior;
 				String methodName = originalMethod.getName();
 				
@@ -246,31 +169,18 @@ public class AssertionTranslator implements Translator {
 				ctClass.addMethod(newMethod);
 				
 			} else if (ctBehavior.getMethodInfo().isConstructor()) {
-	
+				CtConstructor originalConstructor = (CtConstructor) ctBehavior;
+				String constructorName = originalConstructor.getName();
+				
+				CtMethod newMethod = originalConstructor.toMethod(constructorName + "$orig", ctClass);
+				ctClass.addMethod(newMethod);
+				
+				originalConstructor.setBody("return " + newMethod.getName() + "($$);" );
+				originalConstructor.insertAfter("if(!(" + annotation + "))"
+					+ "    throw new RuntimeException(\"The assertion "
+					+ annotation + " is false\");");
+				
 			}
-
-			// String beforeBytecode = "{"
-			// + "  if(!(" + before + "))"
-			// + "    throw new RuntimeException(\"The assertion " + annotation
-			// + " is false\");"
-			// + "}";
-			//
-			// String afterBytecode = "{"
-			// + "  if(!(" + after + "))"
-			// + "    throw new RuntimeException(\"The assertion " + annotation
-			// + " is false\");"
-			// + "}";
-			//
-			// if(!before.equals("")) {
-			// if(ctBehavior.getMethodInfo().isMethod()) {
-			// ctBehavior.insertBefore(beforeBytecode);
-			// }
-			// else if (ctBehavior.getMethodInfo().isConstructor()) {
-			// ((CtConstructor) ctBehavior).insertBeforeBody(beforeBytecode);
-			// }
-			// }
-			// if(!after.equals(""))
-			// ctBehavior.insertAfter(afterBytecode);
 		}
 	}
 

@@ -13,7 +13,7 @@ public class TestMethodArguments {
 	@Assertion("$1.size() > $_.size()")
 	public ArrayList<String> test2(ArrayList<String> a) {
 		a.add("a");
-		a = new ArrayList();
+		a = new ArrayList<String>();
 		return a;
 	}
 
@@ -24,19 +24,16 @@ public class TestMethodArguments {
 		array.add("someMoreData");
 
 		try {
-			test.test1(array); // should fail
-		}
-		catch (RuntimeException r) {
-			System.err.println(r.getMessage());
-		}
-		
-		try {
-			test.test2(array); // shouldn't fail
-		}
-		catch (RuntimeException r) {
+			test.test1(array); // fail
+		} catch (RuntimeException r) {
 			System.err.println(r.getMessage());
 		}
 
-		
+		try {
+			test.test2(array); // pass
+		} catch (RuntimeException r) {
+			System.err.println(r.getMessage());
+		}
+
 	}
 }
