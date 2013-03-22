@@ -5,6 +5,7 @@ import ist.meic.pa.annotations.Assertion;
  * Test class for the field assertions. 
  * Tested for the fields below, in constructors, methods,
  * and also in the field declaration space.
+ * Also testing for field initialization.
  * 
  * @author group3
  *
@@ -29,6 +30,9 @@ public class FieldAssertionTest {
 
 	@Assertion("xuu.length() > 1")
 	String xuu = "xyz";
+	
+	@Assertion("true")
+	int aaa;
 
 	public FieldAssertionTest() {}
 
@@ -87,12 +91,19 @@ public class FieldAssertionTest {
 		}
 	}
 	
+	void testFieldInitialization(){
+		try {
+			abc = aaa;					//fail;
+		} catch (RuntimeException r) {
+			System.err.println(r.getMessage());
+		}
+	}
+	
 
 	public static void main(String[] args) {
-		FieldAssertionTest t1 = null;
-		
-		t1 = new FieldAssertionTest();
+		FieldAssertionTest t1 = new FieldAssertionTest();
 		t1.testClassFieldsInMethods();
+		t1.testFieldInitialization();
 
 	}
 }
