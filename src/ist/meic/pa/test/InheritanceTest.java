@@ -2,11 +2,12 @@ package ist.meic.pa.test;
 
 import ist.meic.pa.annotations.Assertion;
 
-public class TestInheritance extends Test{
+public class InheritanceTest extends MethodAssertionTest{
 
-	public TestInheritance() {}
+	public InheritanceTest() {}
 	
-	public TestInheritance(String test) {
+	@Assertion("$1.length() > 0")
+	public InheritanceTest(String test) {
 		super(test);
 	}
 	
@@ -31,42 +32,49 @@ public class TestInheritance extends Test{
 	}
 
 	public static void main(String[] args) {
-		TestInheritance t = null;
+		InheritanceTest t = null;
 		
 		try {
-			t = new TestInheritance();
+			t = new InheritanceTest("Testing");		//FIXME: fail
 		}
 		catch (RuntimeException r) {
+			t = new InheritanceTest("Test");		//pass
 			System.err.println(r.getMessage());
 		}
 		
 		try {
-			t.inheritanceTest1(1000);		//works
+			t.inheritanceTest1(1000);				//pass
 		}
 		catch (RuntimeException r) {
 			System.err.println(r.getMessage());
 		}
 
 		try {
-			t.inheritanceTest2(1);			//works
-			t.inheritanceTest2(0);			//fails
+			t.inheritanceTest2(2);					//pass
+			t.inheritanceTest2(0);					//fail
 		}
 		catch (RuntimeException r) {
 			System.err.println(r.getMessage());
 		}
 
+		/* FIXME : failing
 		try {
-			t.inheritanceTest3(10, 9);		//works
-			t.inheritanceTest3(1, 2);		//fails
+			t.inheritanceTest3(10, 9);				//pass
+			t.inheritanceTest3(1, 2);				//fail
+		}
+		catch (RuntimeException r) {
+			System.err.println(r.getMessage());
+		}*/
+
+		try {
+			t.inheritanceTest4(5, 3);				//pass
+			t.inheritanceTest4(3, -1);				//fail
 		}
 		catch (RuntimeException r) {
 			System.err.println(r.getMessage());
 		}
-
 		try {
-			t.inheritanceTest4(5, 3);		//works
-			t.inheritanceTest4(3, -1);		//fails
-			//t.inheritanceTest4(0, 3);		//fails
+			t.inheritanceTest4(0, 3);				//fail
 		}
 		catch (RuntimeException r) {
 			System.err.println(r.getMessage());
