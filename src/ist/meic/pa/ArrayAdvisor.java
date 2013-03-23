@@ -1,74 +1,104 @@
 package ist.meic.pa;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.TreeMap;
 
 public class ArrayAdvisor {
 	
-	TreeMap<Object, ArrayList<Integer>> initVariables = new TreeMap<Object, ArrayList<Integer>>();
+	private static HashMap<Object, ArrayList<Integer>> initVariables = new HashMap<Object, ArrayList<Integer>>();
 
-	public static int readInt(Object array, int index) {
+	public static int arrayReadInt(Object array, int index) {
+		getPositionInitialized(array, index);
 		return ((int[])array)[index];
 	}
 
-	public static void writeInt(Object array, int index, int element) {
+	public static void arrayWriteInt(Object array, int index, int element) {
+		setPositionInitialized(array, index);
 		((int[])array)[index] = element;
 	}
 
-	public static long readLong(Object array, int index) {
+	public static long arrayReadLong(Object array, int index) {
+		getPositionInitialized(array, index);
 		return ((long[])array)[index];
 	}
 
-	public static void writeLong(Object array, int index, long element) {
+	public static void arrayWriteLong(Object array, int index, long element) {
+		setPositionInitialized(array, index);
 		((long[])array)[index] = element;
 	}
 
-	public static short readShort(Object array, int index) {
+	public static short arrayReadShort(Object array, int index) {
+		getPositionInitialized(array, index);
 		return ((short[])array)[index];
 	}
 
-	public static void writeShort(Object array, int index, short element) {
+	public static void arrayWriteShort(Object array, int index, short element) {
+		setPositionInitialized(array, index);
 		((short[])array)[index] = element;
 	}
 
-	public static double readDouble(Object array, int index) {
+	public static double arrayReadDouble(Object array, int index) {
+		getPositionInitialized(array, index);
 		return ((double[])array)[index];
 	}
 
-	public static void writeDouble(Object array, int index, double element) {
+	public static void arrayWriteDouble(Object array, int index, double element) {
+		setPositionInitialized(array, index);
 		((double[])array)[index] = element;
 	}
 
-	public static float readFloat(Object array, int index) {
+	public static float arrayReadFloat(Object array, int index) {
+		getPositionInitialized(array, index);
 		return ((float[])array)[index];
 	}
 
-	public static void writeFloat(Object array, int index, float element) {
+	public static void arrayWriteFloat(Object array, int index, float element) {
+		setPositionInitialized(array, index);
 		((float[])array)[index] = element;
 	}
 
-	public static byte readByteOrBoolean(Object array, int index) {
+	public static byte arrayReadByteOrBoolean(Object array, int index) {
+		getPositionInitialized(array, index);
 		return ((byte[])array)[index];
 	}
 
-	public static void writeByteOrBoolean(Object array, int index, byte element) {
+	public static void arrayWriteByteOrBoolean(Object array, int index, byte element) {
+		setPositionInitialized(array, index);
 		((byte[])array)[index] = element;
 	}
 
-	public static char readChar(Object array, int index) {
+	public static char arrayReadChar(Object array, int index) {
+		getPositionInitialized(array, index);
 		return ((char[])array)[index];
 	}
 
-	public static void writeChar(Object array, int index, char element) {
+	public static void arrayWriteChar(Object array, int index, char element) {
+		setPositionInitialized(array, index);
 		((char[])array)[index] = element;
 	}
 
-	public static Object readObject(Object array, int index) {
+	public static Object arrayReadObject(Object array, int index) {
+		getPositionInitialized(array, index);
 		return ((Object[])array)[index];
 	}
 
-	public static void writeObject(Object array, int index, Object element) {
+	public static void arrayWriteObject(Object array, int index, Object element) {
+		setPositionInitialized(array, index);
 		((Object[])array)[index] = element;
+	}
+	
+	private static void setPositionInitialized(Object array, int index) {
+		if(!initVariables.containsKey(array))
+			initVariables.put(array, new ArrayList<Integer>());
+		initVariables.get(array).add(index);
+	}
+	
+	private static void getPositionInitialized(Object array, int index) {
+		if(!initVariables.containsKey(array))
+			throw new NullPointerException("Array has not been initialized");
+		if(!initVariables.get(array).contains(index))
+			throw new RuntimeException("Position " + index + " of array " + array + " has not been initialized");
 	}
 
 }

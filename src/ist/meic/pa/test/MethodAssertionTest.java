@@ -23,7 +23,7 @@ public class MethodAssertionTest {
 
 	public MethodAssertionTest() {}
 	
-	@Assertion("$1.length() < 5")
+	@ExtendedAssertion("$1.length() < 5")
 	public MethodAssertionTest(String test) {}
 
 	@Assertion("$1.size() > $_.size()")

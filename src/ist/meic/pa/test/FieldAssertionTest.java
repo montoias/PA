@@ -1,5 +1,6 @@
 package ist.meic.pa.test;
 import ist.meic.pa.annotations.Assertion;
+import ist.meic.pa.annotations.ExtendedAssertion;
 
 /**
  * Test class for the field assertions. 
@@ -17,10 +18,10 @@ public class FieldAssertionTest {
 	private int foo = 1;
 	
 	@Assertion("bar%2==0")
-	public long bar;
+	private static long bar = 0;
 
 	@Assertion("baz>foo")
-	private static int baz;
+	public int baz = 5;
 
 	@Assertion("quux.length()>1")
 	public static String quux;
@@ -33,6 +34,9 @@ public class FieldAssertionTest {
 	
 	@Assertion("true")
 	int aaa;
+	
+	int[] arr = new int[2];
+//	int[] arr = {1, 2, 3};
 
 	public FieldAssertionTest() {}
 
@@ -51,8 +55,17 @@ public class FieldAssertionTest {
 	 * private
 	 * protected 
 	 * package 
+	 * with modifier static for all the above
 	 */
 	void testClassFieldsInMethods() {
+//		arr[0] = 2;
+		try {
+			int a = arr[0];
+		} catch (RuntimeException e) {
+			System.out.println(e.getMessage());
+		}
+//		for(int i = 0; i < java.lang.Integer.MAX_VALUE; i++)
+//			(new int[1000])[0] = 3;
 		try {
 			bar = 2;					//pass
 			bar++; 						//fail

@@ -1,12 +1,13 @@
 package ist.meic.pa.test;
 
 import ist.meic.pa.annotations.Assertion;
+import ist.meic.pa.annotations.ExtendedAssertion;
 
 public class InheritanceTest extends MethodAssertionTest{
 
 	public InheritanceTest() {}
 	
-	@Assertion("$1.length() > 0")
+	@ExtendedAssertion("$1.length() > 0")
 	public InheritanceTest(String test) {
 		super(test);
 	}
@@ -57,14 +58,14 @@ public class InheritanceTest extends MethodAssertionTest{
 			System.err.println(r.getMessage());
 		}
 
-		/* FIXME : failing
+		// FIXME : failing
 		try {
 			t.inheritanceTest3(10, 9);				//pass
 			t.inheritanceTest3(1, 2);				//fail
 		}
 		catch (RuntimeException r) {
 			System.err.println(r.getMessage());
-		}*/
+		}
 
 		try {
 			t.inheritanceTest4(5, 3);				//pass

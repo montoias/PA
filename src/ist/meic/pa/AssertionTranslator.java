@@ -1,9 +1,12 @@
 package ist.meic.pa;
 
+import java.util.ArrayList;
+
 import ist.meic.pa.annotations.Assertion;
 import ist.meic.pa.annotations.ExtendedAssertion;
 import javassist.CannotCompileException;
 import javassist.ClassPool;
+import javassist.CodeConverter;
 import javassist.CtBehavior;
 import javassist.CtClass;
 import javassist.CtConstructor;
@@ -23,6 +26,8 @@ import javassist.expr.FieldAccess;
  * 
  */
 public class AssertionTranslator implements Translator {
+	
+	private ArrayList<String> extendedAssertions = new ArrayList<String>();
 
 	@Override
 	public void start(ClassPool arg0) throws NotFoundException,
@@ -33,11 +38,15 @@ public class AssertionTranslator implements Translator {
 	@Override
 	public void onLoad(ClassPool pool, String className)
 			throws NotFoundException, CannotCompileException {
+		if(className.equals("ist.meic.pa.ArrayAdvisor"))
+			return;
 		CtClass ctClass = pool.get(className);
 		try {
 			addHashSet(ctClass);
+			inspectFields(ctClass);
+			inspectArrays(pool, ctClass);
 			makeAssertable(ctClass);
-		} catch (CannotCompileException e) {
+		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
 		}
 	}
@@ -51,9 +60,27 @@ public class AssertionTranslator implements Translator {
 	 */
 	private void addHashSet(CtClass ctClass) throws CannotCompileException {
 		CtField ctField = CtField
-				.make("java.util.HashSet variables$notInit = new java.util.HashSet();",
+				.make("static java.util.HashSet variables$init = new java.util.HashSet();",
 						ctClass);
 		ctClass.addField(ctField);
+	}
+	
+	private void inspectFields(CtClass ctClass) throws ClassNotFoundException {
+		for(CtField ctField : ctClass.getDeclaredFields()) {
+			if(ctField.hasAnnotation(ExtendedAssertion.class)) {
+				extendedAssertions.add(((ExtendedAssertion)ctField.getAnnotation(ExtendedAssertion.class)).value());
+			}
+		}
+	}
+	
+	private String getStoredAssertions(String fieldName) {
+		String assertion = null;
+		for(String annotation : extendedAssertions) {
+			if(annotation.contains(fieldName)) {
+				assertion = (assertion == null) ? annotation : assertion + " && " + annotation;
+			}
+		}
+		return assertion;
 	}
 
 	/**
@@ -63,9 +90,10 @@ public class AssertionTranslator implements Translator {
 	 * @param ctClass
 	 * @throws CannotCompileException
 	 * @throws NotFoundException
+	 * @throws ClassNotFoundException 
 	 */
 	private void makeAssertable(CtClass ctClass) throws CannotCompileException,
-	NotFoundException {
+	NotFoundException, ClassNotFoundException {
 
 		for (CtBehavior ctBehavior : ctClass.getDeclaredBehaviors()) {
 			assertBehaviorField(ctBehavior);
@@ -82,7 +110,7 @@ public class AssertionTranslator implements Translator {
 	 * @throws CannotCompileException
 	 */
 	private void assertBehaviorField(CtBehavior ctBehavior)
-			throws CannotCompileException {
+			throws CannotCompileException, NotFoundException {
 		ctBehavior.instrument(new ExprEditor() {
 
 			public void edit(FieldAccess fa) throws CannotCompileException {
@@ -90,28 +118,50 @@ public class AssertionTranslator implements Translator {
 					String template;
 					CtField ctField = fa.getField();
 
-					if (fa.isWriter() && ctField.hasAnnotation(Assertion.class)) {
-						template = "  {"
-								+ "  $0.%s = $1;"
-								+ "  if(!(%s))"
-								+ "    throw new RuntimeException(\"The assertion %s is false\");"
-								+ "  variables$notInit.add(\"%s\");" + "} ";
+					if (fa.isWriter()) {
 
-						String name = fa.getField().getName();
-						String assertion = ((Assertion) ctField
-								.getAnnotation(Assertion.class)).value();
-						fa.replace(String.format(template, name, assertion,
-								assertion, name));
-					} else if (fa.isReader()
-							&& ctField.hasAnnotation(Assertion.class)) {
-						template = "  {"
-								+ "  if(!(variables$notInit.contains(\"%s\")))"
+						if(ctField.hasAnnotation(Assertion.class)) {
+							template = "{"
+									+ "  $0.%s = $1;"
+									+ "  if(!(%s))"
+									+ "    throw new RuntimeException(\"The assertion %s is false\");"
+									+ "  variables$init.add(\"%s\");"
+									+ "}";
+
+							String name = fa.getField().getName();
+							String assertion = ((Assertion) ctField
+									.getAnnotation(Assertion.class)).value();
+							fa.replace(String.format(template, name, assertion,
+									assertion, name));
+						} else if(!extendedAssertions.isEmpty()){
+							template = "{"
+									+ "  $0.%s = $1;"
+									+ "  if(!(%s))"
+									+ "    throw new RuntimeException(\"The assertion %s is false\");"
+									+ " }";
+
+							String name = fa.getField().getName();
+							String assertion = getStoredAssertions(name);
+							if(assertion != null)
+								fa.replace(String.format(template, name, assertion,
+										assertion));
+						}
+					} else if (fa.isReader()) {
+						template = "{"
+								+ "  if(!(variables$init.contains(\"%s\")))"
 								+ "    throw new RuntimeException(\"Error: %s was not initialized\");"
-								+ "  $_ = $proceed($$);" + "} ";
+								+ "  $_ = $proceed($$);"
+								+ "}";
+						if(ctField.hasAnnotation(Assertion.class)) {
 
-						String name = fa.getField().getName();
-						fa.replace(String.format(template, name, name, name));
+							String name = fa.getField().getName();
+							fa.replace(String.format(template, name, name, name));
+						} else {
+							
+						}
+
 					}
+
 
 				} catch (NotFoundException e) {
 					e.printStackTrace();
@@ -129,20 +179,16 @@ public class AssertionTranslator implements Translator {
 	 * 
 	 * @param ctBehavior
 	 * @throws CannotCompileException
+	 * @throws NotFoundException
+	 * @throws ClassNotFoundException 
 	 */
 	private void assertBehavior(CtBehavior ctBehavior, CtClass ctClass)
-			throws CannotCompileException, NotFoundException {
+			throws CannotCompileException, NotFoundException, ClassNotFoundException {
 
 		String template = " if(!(%s))"
 				+ "    throw new RuntimeException(\"The assertion %s is false\");";
 		String assertion = null;
-
-		if (ctBehavior.hasAnnotation(Assertion.class)) {
-			assertion = checkSuperclass(ctBehavior, "Assertion");
-		}
-		else if (ctBehavior.hasAnnotation(ExtendedAssertion.class)) {
-			assertion = checkSuperclass(ctBehavior, "ExtendedAssertion");
-		}
+		assertion = checkSuperclass(ctBehavior);
 		
 		if(assertion != null) {
 			if (ctBehavior.getMethodInfo().isMethod()) {
@@ -168,19 +214,8 @@ public class AssertionTranslator implements Translator {
 	private void assertConstructor(CtConstructor ctConstructor, CtClass ctClass,
 			String template, String assertion) throws CannotCompileException {
 
-		if(ctConstructor.hasAnnotation(Assertion.class)){
-			String constructorName = ctConstructor.getName();
-			String newMethodName = constructorName + "$orig";
-
-			CtMethod newMethod = ctConstructor.toMethod(newMethodName,
-					ctClass);
-			ctClass.addMethod(newMethod);
-
-			ctConstructor.setBody("return " + newMethodName + "($$);");
-			ctConstructor.insertAfter(String.format(template, assertion,
-					assertion));
-		}
-		else if (ctConstructor.hasAnnotation(ExtendedAssertion.class)) {
+		if (ctConstructor.hasAnnotation(ExtendedAssertion.class)) {
+			assertion = assertion.substring(2);
 			ctConstructor.insertBeforeBody(String.format(template,
 					assertion, assertion));
 		}
@@ -211,10 +246,13 @@ public class AssertionTranslator implements Translator {
 
 		originalMethod.setBody("return " + newMethodName + "($$);");
 		
-		if (originalMethod.hasAnnotation(Assertion.class)) {
+		if (!assertion.contains("$<")) {
 			originalMethod.insertAfter(String.format(template, assertion, assertion));
 		}
-		else if (originalMethod.hasAnnotation(ExtendedAssertion.class)) {
+		else {
+			assertion = assertion.substring(2);
+			System.out.println(assertion);
+			
 			String parse[] = assertion.split(" && ");
 			String assertionBefore = "";
 			String assertionAfter = "";
@@ -243,8 +281,9 @@ public class AssertionTranslator implements Translator {
 	 * @param ctBehavior
 	 * @param assertionClass
 	 * @return
+	 * @throws ClassNotFoundException 
 	 */
-	private String checkSuperclass(CtBehavior ctBehavior, String assertionClass) {
+	private String checkSuperclass(CtBehavior ctBehavior) throws ClassNotFoundException {
 		String assertion = null;
 
 		try {
@@ -252,32 +291,40 @@ public class AssertionTranslator implements Translator {
 
 			if (nextClass != null) {
 				assertion = checkSuperclass(nextClass
-						.getDeclaredMethod(ctBehavior.getName()), assertionClass);
+						.getDeclaredMethod(ctBehavior.getName()));
 			}
 		} catch (NotFoundException e) {
 			// If this exception is thrown, it means it doesn't exist in the
 			// superclass, so there's nothing to do
 		}
 
-		try {
-			String value = null;
-			
-			if (assertionClass.equals("Assertion") && ctBehavior.hasAnnotation(Assertion.class)) {
-				value = ((Assertion) ctBehavior.getAnnotation(Assertion.class)).value();
-				
-			}
-			else if (assertionClass.equals("ExtendedAssertion") && ctBehavior.hasAnnotation(ExtendedAssertion.class)) {
+		String value = null;
+
+		if (ctBehavior.hasAnnotation(Assertion.class)) {
+			value = ((Assertion) ctBehavior.getAnnotation(Assertion.class)).value();
+
+		} else if (ctBehavior.hasAnnotation(ExtendedAssertion.class)) {
+
+			if(assertion == null)
+				assertion = "$<" + ((ExtendedAssertion) ctBehavior.getAnnotation(ExtendedAssertion.class)).value();
+			else
 				value = ((ExtendedAssertion) ctBehavior.getAnnotation(ExtendedAssertion.class)).value();
-			}
-			
-			if(value != null) {
-				assertion = (assertion == null) ? value : assertion + " && "
-						+ value;
-			}
-		} catch (ClassNotFoundException e) {
-			// Not supposed to happen
+
+		}
+
+		if(value != null) {
+			assertion = (assertion == null) ? value : assertion + " && "
+					+ value;
 		}
 
 		return assertion;
+	}
+	
+	private void inspectArrays(ClassPool pool, CtClass ctClass) 
+			throws NotFoundException, CannotCompileException {
+		CtClass arrayAdvisor = pool.get("ist.meic.pa.ArrayAdvisor");
+		CodeConverter conv = new CodeConverter();
+		conv.replaceArrayAccess(arrayAdvisor, new CodeConverter.DefaultArrayAccessReplacementMethodNames());
+		ctClass.instrument(conv);
 	}
 }
