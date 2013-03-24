@@ -58,14 +58,15 @@ public class FieldAssertionTest {
 	 * with modifier static for all the above
 	 */
 	void testClassFieldsInMethods() {
-//		arr[0] = 2;
-		try {
-			int a = arr[0];
-		} catch (RuntimeException e) {
-			System.out.println(e.getMessage());
-		}
-//		for(int i = 0; i < java.lang.Integer.MAX_VALUE; i++)
-//			(new int[1000])[0] = 3;
+		arr[0] = 2;
+//		try {
+//			int a = arr[0];
+//		} catch (RuntimeException e) {
+//			System.out.println(e.getMessage());
+//		}
+		for(int i = 0; i < java.lang.Integer.MAX_VALUE; i++)	//pass!
+			(new int[1000])[0] = 3;
+		int a = arr[0];
 		try {
 			bar = 2;					//pass
 			bar++; 						//fail

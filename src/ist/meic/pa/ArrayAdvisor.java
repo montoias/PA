@@ -3,10 +3,11 @@ package ist.meic.pa;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.TreeMap;
+import java.util.WeakHashMap;
 
 public class ArrayAdvisor {
 	
-	private static HashMap<Object, ArrayList<Integer>> initVariables = new HashMap<Object, ArrayList<Integer>>();
+	private static WeakHashMap<Object, ArrayList<Integer>> initVariables = new WeakHashMap<Object, ArrayList<Integer>>();
 
 	public static int arrayReadInt(Object array, int index) {
 		getPositionInitialized(array, index);
