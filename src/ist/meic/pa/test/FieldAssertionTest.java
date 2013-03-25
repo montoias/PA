@@ -1,6 +1,5 @@
 package ist.meic.pa.test;
 import ist.meic.pa.annotations.Assertion;
-import ist.meic.pa.annotations.ExtendedAssertion;
 
 /**
  * Test class for the field assertions. 
