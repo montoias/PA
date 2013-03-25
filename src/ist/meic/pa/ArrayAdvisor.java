@@ -5,6 +5,14 @@ import java.util.HashMap;
 import java.util.TreeMap;
 import java.util.WeakHashMap;
 
+/**
+ * Class used by the code converter to replace all array accesses
+ * by the respective methods. The class is used to check for the
+ * array initialization.
+ * 
+ * @author group3
+ *
+ */
 public class ArrayAdvisor {
 	
 	private static WeakHashMap<Object, ArrayList<Integer>> initVariables = new WeakHashMap<Object, ArrayList<Integer>>();

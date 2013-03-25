@@ -26,19 +26,19 @@ import javassist.expr.FieldAccess;
  * 
  */
 public class AssertionTranslator implements Translator {
-	
+
 	private ArrayList<String> extendedAssertions = new ArrayList<String>();
 
 	@Override
 	public void start(ClassPool arg0) throws NotFoundException,
-	CannotCompileException {
+			CannotCompileException {
 
 	}
 
 	@Override
 	public void onLoad(ClassPool pool, String className)
 			throws NotFoundException, CannotCompileException {
-		if(className.equals("ist.meic.pa.ArrayAdvisor"))
+		if (className.equals("ist.meic.pa.ArrayAdvisor"))
 			return;
 		CtClass ctClass = pool.get(className);
 		try {
@@ -64,20 +64,36 @@ public class AssertionTranslator implements Translator {
 						ctClass);
 		ctClass.addField(ctField);
 	}
-	
+
+	/**
+	 * Stores all the fields annotated with the "ExtendedAssertion" annotation.
+	 * 
+	 * @param ctClass
+	 * @throws ClassNotFoundException
+	 */
 	private void inspectFields(CtClass ctClass) throws ClassNotFoundException {
-		for(CtField ctField : ctClass.getDeclaredFields()) {
-			if(ctField.hasAnnotation(ExtendedAssertion.class)) {
-				extendedAssertions.add(((ExtendedAssertion)ctField.getAnnotation(ExtendedAssertion.class)).value());
+		for (CtField ctField : ctClass.getDeclaredFields()) {
+			if (ctField.hasAnnotation(ExtendedAssertion.class)) {
+				extendedAssertions.add(((ExtendedAssertion) ctField
+						.getAnnotation(ExtendedAssertion.class)).value());
 			}
 		}
 	}
-	
+
+	/**
+	 * Returns a string with all the "ExtendedAssertions" that contain the
+	 * string given by field name. The annotations are concatenated using an
+	 * "&&" operator.
+	 * 
+	 * @param fieldName
+	 * @return
+	 */
 	private String getStoredAssertions(String fieldName) {
 		String assertion = null;
-		for(String annotation : extendedAssertions) {
-			if(annotation.contains(fieldName)) {
-				assertion = (assertion == null) ? annotation : assertion + " && " + annotation;
+		for (String annotation : extendedAssertions) {
+			if (annotation.contains(fieldName)) {
+				assertion = (assertion == null) ? annotation : assertion
+						+ " && " + annotation;
 			}
 		}
 		return assertion;
@@ -85,15 +101,15 @@ public class AssertionTranslator implements Translator {
 
 	/**
 	 * The "Assertion" annotations are interpreted in the given class. The
-	 * "AssertionBefore" annotations are also interpreted in the given class.
+	 * "ExtendedAssertion" annotations are also interpreted in the given class.
 	 * 
 	 * @param ctClass
 	 * @throws CannotCompileException
 	 * @throws NotFoundException
-	 * @throws ClassNotFoundException 
+	 * @throws ClassNotFoundException
 	 */
 	private void makeAssertable(CtClass ctClass) throws CannotCompileException,
-	NotFoundException, ClassNotFoundException {
+			NotFoundException, ClassNotFoundException {
 
 		for (CtBehavior ctBehavior : ctClass.getDeclaredBehaviors()) {
 			assertBehaviorField(ctBehavior);
@@ -120,20 +136,19 @@ public class AssertionTranslator implements Translator {
 
 					if (fa.isWriter()) {
 
-						if(ctField.hasAnnotation(Assertion.class)) {
+						if (ctField.hasAnnotation(Assertion.class)) {
 							template = "{"
 									+ "  $0.%s = $1;"
 									+ "  if(!(%s))"
 									+ "    throw new RuntimeException(\"The assertion %s is false\");"
-									+ "  variables$init.add(\"%s\");"
-									+ "}";
+									+ "  variables$init.add(\"%s\");" + "}";
 
 							String name = fa.getField().getName();
 							String assertion = ((Assertion) ctField
 									.getAnnotation(Assertion.class)).value();
 							fa.replace(String.format(template, name, assertion,
 									assertion, name));
-						} else if(!extendedAssertions.isEmpty()){
+						} else if (!extendedAssertions.isEmpty()) {
 							template = "{"
 									+ "  $0.%s = $1;"
 									+ "  if(!(%s))"
@@ -142,26 +157,25 @@ public class AssertionTranslator implements Translator {
 
 							String name = fa.getField().getName();
 							String assertion = getStoredAssertions(name);
-							if(assertion != null)
-								fa.replace(String.format(template, name, assertion,
-										assertion));
+							if (assertion != null)
+								fa.replace(String.format(template, name,
+										assertion, assertion));
 						}
 					} else if (fa.isReader()) {
 						template = "{"
 								+ "  if(!(variables$init.contains(\"%s\")))"
 								+ "    throw new RuntimeException(\"Error: %s was not initialized\");"
-								+ "  $_ = $proceed($$);"
-								+ "}";
-						if(ctField.hasAnnotation(Assertion.class)) {
+								+ "  $_ = $proceed($$);" + "}";
+						if (ctField.hasAnnotation(Assertion.class)) {
 
 							String name = fa.getField().getName();
-							fa.replace(String.format(template, name, name, name));
+							fa.replace(String
+									.format(template, name, name, name));
 						} else {
-							
+
 						}
 
 					}
-
 
 				} catch (NotFoundException e) {
 					e.printStackTrace();
@@ -180,17 +194,18 @@ public class AssertionTranslator implements Translator {
 	 * @param ctBehavior
 	 * @throws CannotCompileException
 	 * @throws NotFoundException
-	 * @throws ClassNotFoundException 
+	 * @throws ClassNotFoundException
 	 */
 	private void assertBehavior(CtBehavior ctBehavior, CtClass ctClass)
-			throws CannotCompileException, NotFoundException, ClassNotFoundException {
+			throws CannotCompileException, NotFoundException,
+			ClassNotFoundException {
 
 		String template = " if(!(%s))"
 				+ "    throw new RuntimeException(\"The assertion %s is false\");";
 		String assertion = null;
 		assertion = checkSuperclass(ctBehavior);
-		
-		if(assertion != null) {
+
+		if (assertion != null) {
 			if (ctBehavior.getMethodInfo().isMethod()) {
 				assertMethod((CtMethod) ctBehavior, ctClass, template,
 						assertion);
@@ -202,8 +217,8 @@ public class AssertionTranslator implements Translator {
 	}
 
 	/**
-	 * Instruments the given constructor to interpret the "Assertion" annotations.
-	 * The same goes for "ExtendedAssertion" annotations.
+	 * Instruments the given constructor to interpret the "Assertion"
+	 * annotations. The same goes for "ExtendedAssertion" annotations.
 	 * 
 	 * @param ctConstructor
 	 * @param ctClass
@@ -211,13 +226,14 @@ public class AssertionTranslator implements Translator {
 	 * @param assertion
 	 * @throws CannotCompileException
 	 */
-	private void assertConstructor(CtConstructor ctConstructor, CtClass ctClass,
-			String template, String assertion) throws CannotCompileException {
+	private void assertConstructor(CtConstructor ctConstructor,
+			CtClass ctClass, String template, String assertion)
+			throws CannotCompileException {
 
 		if (ctConstructor.hasAnnotation(ExtendedAssertion.class)) {
 			assertion = assertion.substring(2);
-			ctConstructor.insertBeforeBody(String.format(template,
-					assertion, assertion));
+			ctConstructor.insertBeforeBody(String.format(template, assertion,
+					assertion));
 		}
 	}
 
@@ -239,51 +255,52 @@ public class AssertionTranslator implements Translator {
 		String originalMethodName = originalMethod.getName();
 		String newMethodName = originalMethodName + "$orig";
 
-		CtMethod newMethod = CtNewMethod.copy(originalMethod,
-				newMethodName, ctClass, null);
-		
+		CtMethod newMethod = CtNewMethod.copy(originalMethod, newMethodName,
+				ctClass, null);
+
 		ctClass.addMethod(newMethod);
 
 		originalMethod.setBody("return " + newMethodName + "($$);");
-		
+
 		if (!assertion.contains("$<")) {
-			originalMethod.insertAfter(String.format(template, assertion, assertion));
-		}
-		else {
+			originalMethod.insertAfter(String.format(template, assertion,
+					assertion));
+		} else {
 			assertion = assertion.substring(2);
 			System.out.println(assertion);
-			
+
 			String parse[] = assertion.split(" && ");
 			String assertionBefore = "";
 			String assertionAfter = "";
-			
+
 			for (String s : parse) {
 				if (!s.contains("$_")) {
 					assertionBefore += assertionBefore.equals("") ? s : " && " + s;
-				}
-				else {
+				} else {
 					assertionAfter += assertionAfter.equals("") ? s : " && " + s;
 				}
 			}
-			
-			originalMethod.insertBefore(String.format(template, assertionBefore,
+
+			originalMethod.insertBefore(String.format(template,
+					assertionBefore, assertion));
+			originalMethod.insertAfter(String.format(template, assertionAfter,
 					assertion));
-			originalMethod.insertAfter(String.format(template, assertionAfter, assertion));
 		}
 
 	}
 
 	/**
-	 * Checks for the annotation given by assertionClass in the behavior
-	 * passed by ctBehavior. It also traverses the superclasses to check
-	 * for annotations in the same behavior, but of the superclass.
+	 * Checks for the annotation given by assertionClass in the behavior passed
+	 * by ctBehavior. It also traverses the superclasses to check for
+	 * annotations in the same behavior, but of the superclass.
 	 * 
 	 * @param ctBehavior
 	 * @param assertionClass
 	 * @return
-	 * @throws ClassNotFoundException 
+	 * @throws ClassNotFoundException
 	 */
-	private String checkSuperclass(CtBehavior ctBehavior) throws ClassNotFoundException {
+	private String checkSuperclass(CtBehavior ctBehavior)
+			throws ClassNotFoundException {
 		String assertion = null;
 
 		try {
@@ -301,26 +318,26 @@ public class AssertionTranslator implements Translator {
 		String value = null;
 
 		if (ctBehavior.hasAnnotation(Assertion.class)) {
-			value = ((Assertion) ctBehavior.getAnnotation(Assertion.class)).value();
+			value = ((Assertion) ctBehavior.getAnnotation(Assertion.class))
+					.value();
 
 		} else if (ctBehavior.hasAnnotation(ExtendedAssertion.class)) {
 
-			if(assertion == null)
+			if (assertion == null)
 				assertion = "$<" + ((ExtendedAssertion) ctBehavior.getAnnotation(ExtendedAssertion.class)).value();
 			else
 				value = ((ExtendedAssertion) ctBehavior.getAnnotation(ExtendedAssertion.class)).value();
 
 		}
 
-		if(value != null) {
-			assertion = (assertion == null) ? value : assertion + " && "
-					+ value;
+		if (value != null) {
+			assertion = (assertion == null) ? value : assertion + " && " + value;
 		}
 
 		return assertion;
 	}
-	
-	private void inspectArrays(ClassPool pool, CtClass ctClass) 
+
+	private void inspectArrays(ClassPool pool, CtClass ctClass)
 			throws NotFoundException, CannotCompileException {
 		CtClass arrayAdvisor = pool.get("ist.meic.pa.ArrayAdvisor");
 		CodeConverter conv = new CodeConverter();
