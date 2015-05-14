@@ -1,5 +1,3 @@
 PA
 ==
 
-Make tests.
-
